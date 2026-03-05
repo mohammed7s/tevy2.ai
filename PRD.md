@@ -221,8 +221,9 @@ memory/
 | Social Posting | Postiz (master account, cloud) | 🔲 Need account |
 | Web Search | Tavily API | ✅ Key available |
 | LLM | Claude (model TBD) | 🔲 |
-| Hosting (app) | TBD (VPS or HuggingFace Spaces) | 🔲 Deciding |
-| Hosting (instances) | TBD (Docker on VPS) | 🔲 Deciding |
+| Hosting (app) | Fly.io (Next.js app) | ✅ Decided |
+| Hosting (instances) | Fly.io Machines (1 per user, lazy-start) | ✅ Decided |
+| Database + Auth | Supabase (free tier) | ✅ Decided |
 | Chat | OpenClaw webchat embed | 🔲 |
 | Tunnel (dev) | localtunnel | ✅ Running |
 
