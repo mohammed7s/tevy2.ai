@@ -5,3 +5,10 @@ dist/
 .env.local
 *.log
 .DS_Store
+
+# McClowin workspace files (not part of product)
+AGENTS.md
+SOUL.md
+USER.md
+memory/
+secrets.txt
