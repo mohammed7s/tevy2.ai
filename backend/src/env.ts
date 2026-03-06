@@ -1,3 +1,5 @@
+import "dotenv/config";
+
 // Typed env config — fails fast if missing
 function required(key: string): string {
   const val = process.env[key];
