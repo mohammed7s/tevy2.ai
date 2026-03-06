@@ -86,7 +86,7 @@ fi
 
 # --- 2. Configure OpenClaw via onboard ---
 echo "Running OpenClaw onboard..."
-GATEWAY_TOKEN=$(head -c 32 /dev/urandom | xxd -p | head -c 48)
+GATEWAY_TOKEN=$(cat /proc/sys/kernel/random/uuid | tr -d '-')
 openclaw onboard \
     --non-interactive \
     --accept-risk \
@@ -104,6 +104,10 @@ echo "  Gateway token: ${GATEWAY_TOKEN}"
 
 # Set model
 openclaw config set model "${MODEL:-claude-sonnet-4-20250514}" 2>/dev/null || true
+
+# Bind to 0.0.0.0 so Docker can expose the port
+openclaw config set gateway.bind custom 2>/dev/null || true
+openclaw config set gateway.customBind "0.0.0.0" 2>/dev/null || true
 
 # Enable webchat
 openclaw config set channels.webchat.enabled true 2>/dev/null || true
