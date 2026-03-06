@@ -1,3 +1,4 @@
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500&family=Playfair+Display:ital,wght@1,700&family=Sora:wght@400;600;700;800&display=swap');
 @import "tailwindcss";
 
 :root {
@@ -21,12 +22,12 @@
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  font-family: "Inter", -apple-system, BlinkMacSystemFont, sans-serif;
 }
 
 /* Terminal / code font */
 .font-mono {
-  font-family: 'Geist Mono', 'JetBrains Mono', 'Fira Code', monospace;
+  font-family: "Geist Mono", "JetBrains Mono", "Fira Code", monospace;
 }
 
 .gradient-text {
@@ -55,7 +56,7 @@ body {
   background: var(--terminal-bg);
   border: 1px solid var(--border);
   border-radius: 12px;
-  font-family: 'Geist Mono', 'JetBrains Mono', monospace;
+  font-family: "Geist Mono", "JetBrains Mono", monospace;
   font-size: 13px;
   overflow: hidden;
 }
@@ -127,7 +128,7 @@ body {
 }
 
 .btn-telegram {
-  background: #2AABEE;
+  background: #2aabee;
   color: white;
   padding: 12px 32px;
   border-radius: 10px;
@@ -143,7 +144,7 @@ body {
 }
 
 .btn-telegram:hover {
-  background: #229ED9;
+  background: #229ed9;
   transform: translateY(-1px);
   box-shadow: 0 4px 20px rgba(42, 171, 238, 0.3);
 }
@@ -244,13 +245,284 @@ body {
   border: 1px solid var(--border);
   font-size: 12px;
   color: var(--muted);
-  font-family: 'Geist Mono', monospace;
+  font-family: "Geist Mono", monospace;
+}
+
+/* Munib-inspired landing styles */
+.landing-shell {
+  position: relative;
+  overflow: hidden;
+  min-height: 100vh;
+  background: #0b0c0f;
+  color: #f5f7ff;
+  font-family: "DM Sans", "Inter", -apple-system, BlinkMacSystemFont, sans-serif;
+  --landing-neon: #5bf33a;
+  --landing-neon-strong: #4be02c;
+  --landing-neon-soft: rgba(91, 243, 58, 0.3);
+  --landing-border: rgba(255, 255, 255, 0.1);
+}
+
+.landing-grid {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  background-image: linear-gradient(rgba(255, 255, 255, 0.04) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.04) 1px, transparent 1px);
+  background-size: 56px 56px;
+  mask-image: radial-gradient(ellipse 78% 60% at 50% 12%, black, transparent 74%);
+}
+
+.landing-glow {
+  position: absolute;
+  top: 36px;
+  left: 50%;
+  width: min(980px, 90vw);
+  height: 680px;
+  transform: translateX(-50%);
+  pointer-events: none;
+  z-index: 0;
+  background: radial-gradient(circle, rgba(91, 243, 58, 0.22) 0%, transparent 72%);
+}
+
+.landing-grain {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 1;
+  opacity: 0.06;
+  mix-blend-mode: overlay;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
+}
+
+.landing-container {
+  position: relative;
+  z-index: 2;
+  width: min(1200px, calc(100% - 2rem));
+  margin-inline: auto;
+}
+
+.landing-nav {
+  position: sticky;
+  top: 10px;
+  z-index: 5;
+  border: 1px solid var(--landing-border);
+  border-radius: 12px;
+  background: rgba(8, 10, 12, 0.8);
+  backdrop-filter: blur(14px);
+  padding-inline: 14px;
+  margin-top: 10px;
+}
+
+.landing-display {
+  font-family: "Sora", system-ui, sans-serif;
+}
+
+.landing-eyebrow {
+  font-family: "IBM Plex Mono", monospace;
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--landing-neon);
+}
+
+.landing-hero {
+  position: relative;
+}
+
+.landing-section {
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.landing-headline {
+  font-family: "Sora", system-ui, sans-serif;
+  font-weight: 800;
+  line-height: 1.02;
+  letter-spacing: -0.02em;
+  text-transform: uppercase;
+  font-size: clamp(2rem, 3.8vw, 4rem);
+}
+
+.landing-section-title {
+  font-family: "Sora", system-ui, sans-serif;
+  font-weight: 700;
+  letter-spacing: -0.015em;
+  font-size: clamp(1.45rem, 2.7vw, 2.35rem);
+  line-height: 1.1;
+}
+
+.landing-em {
+  font-family: "Playfair Display", serif;
+  font-style: italic;
+  font-weight: 700;
+  color: var(--landing-neon);
+}
+
+.landing-highlight {
+  color: var(--landing-neon);
+}
+
+.landing-muted {
+  color: #a7acb8;
+}
+
+.landing-panel {
+  border-radius: 1.5rem;
+  border: 1px solid var(--landing-border);
+  background: rgba(11, 12, 15, 0.8);
+  backdrop-filter: blur(12px);
+}
+
+.landing-card {
+  border-radius: 1rem;
+  border: 1px solid var(--landing-border);
+  background: rgba(245, 247, 255, 0.03);
+  padding: 1.1rem;
+  transition: border-color 0.2s ease, transform 0.2s ease;
+}
+
+.landing-card:hover {
+  border-color: rgba(91, 243, 58, 0.72);
+  transform: translateY(-2px);
+}
+
+.landing-card-featured {
+  border-color: rgba(91, 243, 58, 0.92);
+  background: rgba(91, 243, 58, 0.12);
+}
+
+.landing-card-title {
+  font-family: "Sora", system-ui, sans-serif;
+  font-weight: 600;
+  color: #f5f7ff;
+}
+
+.landing-step {
+  font-family: "IBM Plex Mono", monospace;
+  color: var(--landing-neon);
+  font-size: 0.8rem;
+  font-weight: 500;
+}
+
+.landing-stat {
+  font-family: "Sora", system-ui, sans-serif;
+  color: var(--landing-neon);
+  font-size: clamp(2rem, 3.4vw, 3rem);
+  font-weight: 700;
+  line-height: 1;
+  margin-bottom: 0.5rem;
+}
+
+.landing-quote {
+  border-left: 2px solid var(--landing-neon);
+  padding-left: 0.9rem;
+  color: #f5f7ff;
+  font-style: italic;
+}
+
+.landing-badge {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 999px;
+  border: 1px solid rgba(91, 243, 58, 0.45);
+  background: rgba(245, 247, 255, 0.03);
+  padding: 0.25rem 0.7rem;
+  color: rgba(245, 247, 255, 0.84);
+  font-family: "IBM Plex Mono", monospace;
+  font-size: 0.72rem;
+}
+
+.landing-metric-chip {
+  border-radius: 0.85rem;
+  border: 1px solid rgba(91, 243, 58, 0.5);
+  background: rgba(91, 243, 58, 0.16);
+  padding: 0.85rem 1rem;
+}
+
+.landing-btn-primary,
+.landing-btn-outline {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 0.75rem;
+  font-weight: 600;
+  font-size: 0.95rem;
+  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease, color 0.2s ease;
+  padding: 0.8rem 1.25rem;
+}
+
+.landing-btn-primary {
+  background: var(--landing-neon);
+  color: #0b0c0f;
+  border: 1px solid var(--landing-neon);
+  font-weight: 700;
+}
+
+.landing-btn-primary:hover {
+  transform: translateY(-2px);
+  background: var(--landing-neon-strong);
+  box-shadow: 0 12px 34px rgba(91, 243, 58, 0.54);
+}
+
+.landing-btn-outline {
+  border: 1px solid var(--landing-border);
+  color: #f5f7ff;
+  background: rgba(245, 247, 255, 0.02);
+}
+
+.landing-btn-outline:hover {
+  border-color: var(--landing-neon);
+  color: var(--landing-neon);
+}
+
+.landing-list-item {
+  position: relative;
+  padding-left: 1rem;
+}
+
+.landing-list-item::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0.58em;
+  width: 0.36rem;
+  height: 0.36rem;
+  border-radius: 999px;
+  background: var(--landing-neon);
+}
+
+.landing-progress {
+  height: 0.65rem;
+  border-radius: 999px;
+  overflow: hidden;
+  background: var(--landing-neon-soft);
+}
+
+.landing-progress-fill {
+  height: 100%;
+  background: var(--landing-neon);
+}
+
+@media (max-width: 768px) {
+  .landing-container {
+    width: min(1200px, calc(100% - 1.2rem));
+  }
+
+  .landing-badge {
+    display: none;
+  }
 }
 
 /* Typing animation */
 @keyframes blink {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0; }
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0;
+  }
 }
 
 .cursor-blink::after {
@@ -258,23 +530,4 @@ body {
   color: var(--terminal-green);
   animation: blink 1s step-end infinite;
   margin-left: 2px;
-}
-
-/* Smooth scroll */
-html {
-  scroll-behavior: smooth;
-}
-
-/* Scrollbar */
-::-webkit-scrollbar {
-  width: 6px;
-}
-
-::-webkit-scrollbar-track {
-  background: var(--background);
-}
-
-::-webkit-scrollbar-thumb {
-  background: var(--border);
-  border-radius: 3px;
 }

@@ -1,263 +1,354 @@
+import Image from "next/image";
 import Link from "next/link";
+
+const processSteps = [
+  {
+    id: "01",
+    title: "Scan and monitor",
+    description:
+      "Continuously tracks your social presence and competitor activity across major channels.",
+  },
+  {
+    id: "02",
+    title: "Analyze and understand",
+    description:
+      "Builds a live picture of your market, audience behavior, and content performance.",
+  },
+  {
+    id: "03",
+    title: "Identify trends",
+    description:
+      "Spots emerging topics before they peak, so you publish while attention is building.",
+  },
+  {
+    id: "04",
+    title: "Suggest content",
+    description:
+      "Generates channel-ready copy, visual direction, and hashtag strategy in your voice.",
+  },
+  {
+    id: "05",
+    title: "Optimize channels",
+    description:
+      "Recommends the right platform mix and posting cadence for your goals.",
+  },
+  {
+    id: "06",
+    title: "Auto-post and learn",
+    description:
+      "Publishes at optimal times and improves recommendations from every result. Finds relevant corporate client leads and drafts introduction emails that actually convert.",
+  },
+];
+
+const pricingPlans = [
+  {
+    name: "Starter",
+    price: "$39",
+    subtitle: "Perfect for freelancers and solopreneurs",
+    features: ["3 social accounts", "60 AI-generated posts/month", "Basic analytics", "Email support"],
+  },
+  {
+    name: "Professional",
+    price: "$89",
+    subtitle: "Ideal for growing businesses and agencies",
+    features: ["10 social accounts", "Unlimited AI posts", "Advanced analytics", "Competitor tracking"],
+  },
+  {
+    name: "Growth",
+    price: "$149",
+    subtitle: "Built for scaling businesses",
+    features: ["20 social accounts", "Unlimited AI posts", "Priority support", "Advanced intelligence suite"],
+    featured: true,
+  },
+  {
+    name: "Enterprise",
+    price: "$299",
+    subtitle: "For organizations with custom needs",
+    features: ["Unlimited accounts", "Custom AI training", "Dedicated manager", "SLA and API access"],
+  },
+];
 
 export default function Home() {
   return (
-    <div className="min-h-screen">
-      {/* Nav */}
-      <nav className="flex items-center justify-between px-8 py-5 max-w-6xl mx-auto">
+    <div className="landing-shell">
+      <div className="landing-grid" />
+      <div className="landing-glow" />
+      <div className="landing-grain" />
+
+      <nav className="landing-nav landing-container flex items-center justify-between py-6">
         <div className="flex items-center gap-3">
-          <img src="/logo-wizard.jpg" alt="tevy2" className="w-8 h-8 rounded-lg" />
-          <div className="text-xl font-bold">
-            <span className="gradient-text">tevy2</span>
-            <span className="text-[var(--muted)]">.ai</span>
-          </div>
-          <span className="powered-badge">
-            <span style={{ fontSize: "14px" }}>🐾</span> OpenClaw
-          </span>
+          <Image src="/logo-wizard.jpg" alt="tevy2" width={36} height={36} className="h-9 w-9 rounded-lg" />
+          <div className="landing-display text-lg font-bold tracking-tight">TevY2.ai</div>
+          <span className="landing-badge">Powered by OpenClaw</span>
         </div>
-        <div className="flex gap-4 items-center">
-          <Link href="/login" className="text-[var(--muted)] hover:text-white transition text-sm">
+        <div className="flex items-center gap-3">
+          <Link href="/login" className="landing-btn-outline !px-4 !py-2 text-sm">
             Log in
           </Link>
-          <Link href="/setup" className="btn-primary text-sm !py-2 !px-5">
-            Get Started
+          <Link href="/setup" className="landing-btn-primary !px-4 !py-2 text-sm">
+            Request demo
           </Link>
         </div>
       </nav>
 
-      {/* Hero */}
-      <section className="max-w-4xl mx-auto px-8 pt-24 pb-16 text-center">
-        <div className="inline-block px-4 py-1.5 rounded-full glass text-sm text-[var(--muted)] mb-6">
-          AI-powered marketing for small businesses
-        </div>
-        <h1 className="text-5xl md:text-6xl font-bold leading-tight mb-6">
-          Your first <span className="gradient-text">marketing hire</span>
-          <br />doesn&apos;t need a salary
-        </h1>
-        <p className="text-lg text-[var(--muted)] max-w-2xl mx-auto mb-10">
-          Tevy learns your brand, drafts social posts, tracks competitors, and manages your content calendar.
-          Like a marketing person — but available 24/7 for a fraction of the cost.
-        </p>
-        <div className="flex gap-4 justify-center">
-          <Link href="/setup" className="btn-primary">
-            Start free trial →
-          </Link>
-          <a href="#how-it-works" className="btn-secondary">
-            See how it works
-          </a>
-        </div>
-      </section>
+      <main className="landing-container pb-24">
+        <section className="landing-hero pb-20 pt-8 md:pt-12">
+          <p className="landing-eyebrow mb-5">AI-powered - Fully automated - Data-driven</p>
 
-      {/* Terminal Preview */}
-      <section className="max-w-2xl mx-auto px-8 pb-12">
-        <div className="terminal-block glow">
-          <div className="terminal-header">
-            <div className="terminal-dot" style={{ background: "#ff5f57" }}></div>
-            <div className="terminal-dot" style={{ background: "#febc2e" }}></div>
-            <div className="terminal-dot" style={{ background: "#28c840" }}></div>
-            <span className="text-xs text-[var(--muted)] ml-2 font-mono">tevy2 — deploying agent</span>
-          </div>
-          <div className="terminal-body text-[var(--muted)]">
-            <div className="terminal-prompt text-[var(--foreground)]">tevy2 deploy --brand &quot;sunrise-coffee&quot;</div>
-            <div className="mt-2">
-              <span className="text-[var(--terminal-green)]">✓</span> Scanning website... <span className="text-[var(--terminal-green)]">done</span>
-            </div>
-            <div>
-              <span className="text-[var(--terminal-green)]">✓</span> Analyzing brand voice... <span className="text-[var(--terminal-green)]">done</span>
-            </div>
-            <div>
-              <span className="text-[var(--terminal-green)]">✓</span> Connecting Telegram... <span className="text-[var(--terminal-green)]">done</span>
-            </div>
-            <div>
-              <span className="text-[var(--terminal-green)]">✓</span> Loading skills: <span className="text-[var(--accent-light)]">content-drafting, competitor-watch, calendar</span>
-            </div>
-            <div className="mt-2 text-[var(--foreground)]">
-              <span className="text-[var(--terminal-green)]">●</span> Agent live. Talk to Tevy on Telegram →
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Chat Preview */}
-      <section className="max-w-2xl mx-auto px-8 pb-20">
-        <div className="glass rounded-2xl p-6 glow">
-          <div className="flex items-center gap-3 mb-5 pb-4 border-b border-[var(--border)]">
-            <img src="/logo-wizard.jpg" alt="Tevy" className="w-8 h-8 rounded-full" />
-            <div>
-              <div className="font-semibold text-sm">Tevy</div>
-              <div className="text-xs text-[var(--muted)]">Your marketing assistant</div>
-            </div>
-            <div className="ml-auto flex items-center gap-2">
-              <div className="w-2 h-2 rounded-full bg-green-500"></div>
-              <span className="text-xs text-[var(--muted)] font-mono">via Telegram</span>
-            </div>
-          </div>
-          <div className="space-y-4">
-            <div className="flex gap-3">
-              <img src="/logo-wizard.jpg" alt="Tevy" className="w-6 h-6 rounded-full flex-shrink-0 mt-1" />
-              <div className="glass rounded-xl rounded-tl-sm px-4 py-3 text-sm max-w-[85%]">
-                Hey! I&apos;ve analyzed your website and social accounts. Here&apos;s what I found:
-                <br /><br />
-                <strong>Brand vibe:</strong> Warm, artisan, community-focused<br />
-                <strong>Audience:</strong> 25-40, urban professionals who care about quality<br />
-                <strong>Best content:</strong> Behind-the-scenes + product stories<br /><br />
-                Does this feel right? Want me to draft your first post?
+          <div className="grid gap-6 lg:grid-cols-[1.05fr_0.95fr] lg:items-stretch">
+            <div className="landing-panel p-6 md:p-8">
+              <h1 className="landing-headline mb-6">
+                The social media wizard that turns <span className="landing-highlight">chaos</span> into{" "}
+                <span className="landing-em">conversions</span>
+              </h1>
+              <p className="landing-muted mb-6 max-w-2xl text-base md:text-lg">
+                TevY2 agent combines real time intelligence, augmented content creation and advanced automated lead genreation so businesses can grow faster without adding marketing overhead. TevY2 agent is the perfect social partner for the growing 15,000,000 person higgsfield.ai community.
+              </p>
+              <div className="grid gap-2 text-sm md:text-base">
+                <p className="landing-list-item">Competitor intelligence that runs 24/7</p>
+                <p className="landing-list-item">Trend detection before topics peak</p>
+                <p className="landing-list-item">Brand-matched content generated at scale</p>
+              </div>
+              <div className="mt-8 flex flex-wrap gap-3">
+                <Link href="/setup" className="landing-btn-primary">
+                  Start free trial
+                </Link>
+                <a href="#how-it-works" className="landing-btn-outline">
+                  Explore how it works
+                </a>
               </div>
             </div>
-            <div className="flex gap-3 justify-end">
-              <div className="bg-[var(--accent)] rounded-xl rounded-tr-sm px-4 py-3 text-sm max-w-[85%] text-white">
-                That&apos;s spot on! Yes, draft something for Instagram about our new summer collection
-              </div>
-            </div>
-            <div className="flex gap-3">
-              <img src="/logo-wizard.jpg" alt="Tevy" className="w-6 h-6 rounded-full flex-shrink-0 mt-1" />
-              <div className="glass rounded-xl rounded-tl-sm px-4 py-3 text-sm max-w-[85%]">
-                Here are 3 options for your summer collection post:<br /><br />
-                <strong>Option A</strong> (storytelling):<br />
-                &quot;Every piece in our summer collection started as a sketch on a rainy Tuesday...&quot;<br /><br />
-                <strong>Option B</strong> (direct):<br />
-                &quot;Summer&apos;s here. So is our new collection. 12 pieces, all handcrafted...&quot;<br /><br />
-                <strong>Option C</strong> (engagement):<br />
-                &quot;Which summer vibe are you? ☀️ Tell us and we&apos;ll match you with your perfect piece...&quot;<br /><br />
-                Want me to schedule any of these?
-              </div>
+
+            <div className="landing-panel overflow-hidden p-2">
+              <Image
+                src="/hero-portrait.jpg"
+                alt="TevY2 Social Media Wizard"
+                width={960}
+                height={1280}
+                priority
+                className="h-full min-h-[320px] w-full rounded-2xl object-cover"
+              />
             </div>
           </div>
-        </div>
-      </section>
+        </section>
 
-      {/* How It Works */}
-      <section id="how-it-works" className="max-w-4xl mx-auto px-8 py-20">
-        <h2 className="text-3xl font-bold text-center mb-4">How it works</h2>
-        <p className="text-[var(--muted)] text-center mb-12">Three steps. Two minutes. One marketing agent.</p>
+        <section className="landing-section py-10" id="problem">
+          <p className="landing-eyebrow mb-4">The problem</p>
+          <h2 className="landing-section-title mb-8">
+            96% of SMBs use social media, but <span className="landing-highlight">90% fail to generate results</span>
+          </h2>
+          <div className="grid gap-4 md:grid-cols-3">
+            <div className="landing-card">
+              <p className="landing-stat">96%</p>
+              <p className="landing-card-title">Social adoption is universal</p>
+              <p className="landing-muted text-sm">Businesses know social channels are essential for growth and visibility.</p>
+            </div>
+            <div className="landing-card">
+              <p className="landing-stat">90%</p>
+              <p className="landing-card-title">Results are inconsistent</p>
+              <p className="landing-muted text-sm">Most businesses invest heavily yet fail to produce reliable business impact.</p>
+            </div>
+            <div className="landing-card">
+              <p className="landing-stat">61%</p>
+              <p className="landing-card-title">ROI is unclear</p>
+              <p className="landing-muted text-sm">Without clear attribution, strategy and budget decisions stay reactive.</p>
+            </div>
+          </div>
 
-        <div className="grid md:grid-cols-3 gap-8">
-          <div className="glass rounded-2xl p-6 text-center">
-            <div className="text-4xl mb-4">📧</div>
-            <h3 className="font-semibold mb-2">Sign up & connect Telegram</h3>
-            <p className="text-sm text-[var(--muted)]">
-              Enter your email, connect your Telegram. That&apos;s where Tevy lives — right in your pocket.
+          <div className="mt-6 grid gap-4 md:grid-cols-3">
+            <div className="landing-card">
+              <p className="landing-card-title">Time-intensive</p>
+              <p className="landing-muted text-sm">Creating content, reviewing metrics, and engaging audiences can exceed 15 hours per week per platform.</p>
+            </div>
+            <div className="landing-card">
+              <p className="landing-card-title">Complexity overload</p>
+              <p className="landing-muted text-sm">Teams juggle roughly 6.8 platforms with different algorithms, formats, and audience behavior.</p>
+            </div>
+            <div className="landing-card">
+              <p className="landing-card-title">Constant change</p>
+              <p className="landing-muted text-sm">Trends, best practices, and distribution systems shift daily, making manual adaptation too slow.</p>
+            </div>
+          </div>
+        </section>
+
+        <section className="landing-section py-10">
+          <p className="landing-eyebrow mb-4">Pain points</p>
+          <h2 className="landing-section-title mb-8">Three questions every marketer keeps asking</h2>
+          <div className="grid gap-4 md:grid-cols-3">
+            <div className="landing-card">
+              <p className="landing-card-title">How do we influence our audience day to day?</p>
+              <p className="landing-muted text-sm">Most businesses still post without reliable insight into timing, behavior, and message resonance.</p>
+            </div>
+            <div className="landing-card">
+              <p className="landing-card-title">How do we stay relevant?</p>
+              <p className="landing-muted text-sm">By the time trends are recognized manually, the opportunity window is usually closed.</p>
+            </div>
+            <div className="landing-card">
+              <p className="landing-card-title">How do we scale high-quality content?</p>
+              <p className="landing-muted text-sm">Manual production is slow and inconsistent, causing posting gaps and lost momentum.</p>
+            </div>
+          </div>
+          <p className="mt-5 landing-muted">
+            The gap: most tools help businesses schedule posts, but not decide what to post, when to post, and why it matters.
+          </p>
+        </section>
+
+        <section className="landing-section py-10">
+          <p className="landing-eyebrow mb-4">The solution</p>
+          <div className="landing-panel p-6 md:p-8">
+            <h2 className="landing-section-title mb-4">Meet TevY2: your AI social media wizard</h2>
+            <blockquote className="landing-quote mb-6">
+              &quot;TevY2 is like having data scientists, content strategists, and social media managers
+              working 24/7 at a fraction of the cost.&quot;
+            </blockquote>
+            <div className="grid gap-4 md:grid-cols-2">
+              <div className="landing-card">
+                <p className="landing-card-title">Intelligent analysis</p>
+                <p className="landing-muted text-sm">Scans competitors, market trends, and audience behavior in real time.</p>
+              </div>
+              <div className="landing-card">
+                <p className="landing-card-title">Automated creation</p>
+                <p className="landing-muted text-sm">Builds platform-optimized content that reflects your brand voice.</p>
+              </div>
+              <div className="landing-card">
+                <p className="landing-card-title">Perfect timing</p>
+                <p className="landing-muted text-sm">Publishes at high-impact moments based on audience and algorithm patterns.</p>
+              </div>
+              <div className="landing-card">
+                <p className="landing-card-title">Continuous learning</p>
+                <p className="landing-muted text-sm">Improves output quality and targeting from every campaign outcome.</p>
+              </div>
+            </div>
+            <p className="mt-5 landing-muted text-sm">
+              Strategic intelligence - End-to-end automation - Multi-platform mastery - Measurable ROI
             </p>
           </div>
-          <div className="glass rounded-2xl p-6 text-center">
-            <div className="text-4xl mb-4">🌐</div>
-            <h3 className="font-semibold mb-2">Tell Tevy about your brand</h3>
-            <p className="text-sm text-[var(--muted)]">
-              Paste your website, social accounts, and any brand files. Tevy analyzes everything in seconds.
-            </p>
-          </div>
-          <div className="glass rounded-2xl p-6 text-center">
-            <div className="text-4xl mb-4">🚀</div>
-            <h3 className="font-semibold mb-2">Deploy & start chatting</h3>
-            <p className="text-sm text-[var(--muted)]">
-              We deploy your personal marketing agent. Open Telegram and start talking — it&apos;s that simple.
-            </p>
-          </div>
-        </div>
-      </section>
+        </section>
 
-      {/* Features */}
-      <section className="max-w-4xl mx-auto px-8 py-20">
-        <h2 className="text-3xl font-bold text-center mb-12">Everything a marketing person does</h2>
+        <section id="how-it-works" className="landing-section py-10">
+          <p className="landing-eyebrow mb-4">Product features</p>
+          <h2 className="landing-section-title mb-8">How TevY2 works: six steps</h2>
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+            {processSteps.map((step) => (
+              <div key={step.id} className="landing-card">
+                <p className="landing-step">{step.id}</p>
+                <p className="landing-card-title mt-2">{step.title}</p>
+                <p className="landing-muted mt-2 text-sm">{step.description}</p>
+              </div>
+            ))}
+          </div>
+        </section>
 
-        <div className="grid md:grid-cols-2 gap-6">
-          {[
-            { icon: "🎯", title: "Brand Analysis", desc: "Scrapes your site, reads your social presence, understands your vibe, audience, and positioning." },
-            { icon: "✍️", title: "Content Drafting", desc: "Creates platform-specific posts — Instagram carousels, LinkedIn articles, TikTok scripts, X threads." },
-            { icon: "📅", title: "Content Calendar", desc: "Plans your posting schedule, identifies gaps, suggests timely content based on trends and events." },
-            { icon: "🔍", title: "Competitor Research", desc: "Tracks what your competitors post, how they engage, and spots opportunities you're missing." },
-            { icon: "📊", title: "Market Intelligence", desc: "Monitors industry trends, audience pain points, and emerging topics in your niche." },
-            { icon: "📲", title: "Auto Publishing", desc: "Connects to your social accounts and publishes approved posts on schedule." },
-          ].map((f, i) => (
-            <div key={i} className="glass rounded-xl p-5 flex gap-4">
-              <div className="text-2xl">{f.icon}</div>
-              <div>
-                <h3 className="font-semibold mb-1">{f.title}</h3>
-                <p className="text-sm text-[var(--muted)]">{f.desc}</p>
+        <section className="landing-section py-10">
+          <p className="landing-eyebrow mb-4">AI capabilities</p>
+          <h2 className="landing-section-title mb-8">Intelligence that understands your market</h2>
+          <div className="grid gap-4 lg:grid-cols-3">
+            <div className="landing-card">
+              <p className="landing-card-title">Competitor intelligence</p>
+              <p className="landing-muted mt-2 text-sm">Real-time activity tracking plus AI-driven gap analysis across content strategy.</p>
+              <div className="landing-metric-chip mt-4">
+                <p className="landing-highlight text-xl font-bold">+340%</p>
+                <p className="landing-muted text-xs">Engagement increase</p>
               </div>
             </div>
-          ))}
-        </div>
-      </section>
+            <div className="landing-card">
+              <p className="landing-card-title">Market trend detection</p>
+              <p className="landing-muted mt-2 text-sm">Identifies rising topics before they become mainstream so businesses can lead.</p>
+              <div className="landing-metric-chip mt-4">
+                <p className="landing-highlight text-xl font-bold">3 weeks</p>
+                <p className="landing-muted text-xs">Typical early signal window</p>
+              </div>
+            </div>
+            <div className="landing-card">
+              <p className="landing-card-title">Customer understanding</p>
+              <p className="landing-muted mt-2 text-sm">Deep analysis of demographics, behavior patterns, and sentiment by channel.</p>
+              <div className="landing-metric-chip mt-4">
+                <p className="landing-highlight text-xl font-bold">-60%</p>
+                <p className="landing-muted text-xs">Time spent on manual planning</p>
+              </div>
+            </div>
+          </div>
+        </section>
 
-      {/* Tech Stack Badge */}
-      <section className="max-w-4xl mx-auto px-8 py-10">
-        <div className="terminal-block max-w-lg mx-auto">
-          <div className="terminal-header">
-            <div className="terminal-dot" style={{ background: "#ff5f57" }}></div>
-            <div className="terminal-dot" style={{ background: "#febc2e" }}></div>
-            <div className="terminal-dot" style={{ background: "#28c840" }}></div>
-            <span className="text-xs text-[var(--muted)] ml-2 font-mono">stack.md</span>
+        <section className="landing-section py-10">
+          <p className="landing-eyebrow mb-4">Automation engine</p>
+          <div className="grid gap-4 lg:grid-cols-[1.05fr_0.95fr]">
+            <div className="landing-card">
+              <h3 className="landing-card-title text-xl">Content creation at scale</h3>
+              <p className="landing-muted mt-3 text-sm">
+                TevY2 generates platform-ready copy, visual direction, and posting plans, then schedules and publishes at
+                the right time for each audience.
+              </p>
+              <blockquote className="landing-quote mt-6">
+                &quot;What used to take our business a full week now happens automatically in minutes.&quot;
+              </blockquote>
+              <p className="landing-muted mt-3 text-xs">Early beta customer</p>
+            </div>
+            <div className="grid gap-4 sm:grid-cols-3 lg:grid-cols-1">
+              <div className="landing-metric-chip p-5">
+                <p className="landing-highlight text-2xl font-bold">+287%</p>
+                <p className="landing-muted text-sm">Engagement rate</p>
+              </div>
+              <div className="landing-metric-chip p-5">
+                <p className="landing-highlight text-2xl font-bold">10x</p>
+                <p className="landing-muted text-sm">Content output</p>
+              </div>
+              <div className="landing-metric-chip p-5">
+                <p className="landing-highlight text-2xl font-bold">25 hrs/week</p>
+                <p className="landing-muted text-sm">Time saved</p>
+              </div>
+            </div>
           </div>
-          <div className="terminal-body text-sm">
-            <div className="text-[var(--muted)]"># Powered by</div>
-            <div className="mt-1"><span className="text-[var(--terminal-green)]">engine:</span> OpenClaw (190k+ ⭐)</div>
-            <div><span className="text-[var(--terminal-green)]">runtime:</span> Private agent per customer</div>
-            <div><span className="text-[var(--terminal-green)]">chat:</span> Telegram (more channels soon)</div>
-            <div><span className="text-[var(--terminal-green)]">built_by:</span> <a href="https://brainandbot.gg" className="text-[var(--accent-light)] hover:underline">Brain&amp;Bots</a></div>
-          </div>
-        </div>
-      </section>
+        </section>
 
-      {/* Pricing */}
-      <section className="max-w-4xl mx-auto px-8 py-20">
-        <h2 className="text-3xl font-bold text-center mb-4">Simple pricing</h2>
-        <p className="text-[var(--muted)] text-center mb-12">Less than a freelancer. More reliable than an intern.</p>
+        <section className="landing-section py-10">
+          <p className="landing-eyebrow mb-4">Pricing</p>
+          <h2 className="landing-section-title mb-8">Pricing</h2>
+          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+            {pricingPlans.map((plan) => (
+              <div key={plan.name} className={`landing-card ${plan.featured ? "landing-card-featured" : ""}`}>
+                <p className="landing-card-title">{plan.name}</p>
+                <div className="mt-2 flex items-baseline gap-1">
+                  <p className="landing-highlight text-3xl font-bold">{plan.price}</p>
+                  <p className="landing-muted text-sm">/mo</p>
+                </div>
+                <p className="landing-muted mt-2 text-sm">{plan.subtitle}</p>
+                <ul className="mt-4 space-y-2 text-sm">
+                  {plan.features.map((feature) => (
+                    <li key={feature} className="landing-list-item">
+                      {feature}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ))}
+          </div>
+          <p className="landing-muted mt-6 text-sm">
+            Target customers: SMBs, agencies, ecommerce brands, and creators. Goal: $10M ARR by Year 3 with a
+            product-led growth motion.
+          </p>
+        </section>
 
-        <div className="grid md:grid-cols-2 gap-8 max-w-3xl mx-auto">
-          <div className="glass rounded-2xl p-8">
-            <div className="text-sm text-[var(--muted)] mb-2">Starter</div>
-            <div className="text-4xl font-bold mb-1">$29<span className="text-lg text-[var(--muted)]">/mo</span></div>
-            <p className="text-sm text-[var(--muted)] mb-6">Perfect for getting started</p>
-            <ul className="space-y-3 text-sm mb-8">
-              {["Brand analysis", "30 post drafts/month", "2 social platforms", "Weekly competitor report", "Telegram chat"].map((f, i) => (
-                <li key={i} className="flex items-center gap-2">
-                  <span className="text-green-500">✓</span> {f}
-                </li>
-              ))}
-            </ul>
-            <Link href="/setup" className="btn-secondary block text-center w-full">Get started</Link>
+        <section className="landing-section py-14 text-center">
+          <p className="landing-eyebrow mb-4">Roadmap and vision</p>
+          <h2 className="landing-section-title mb-4">Build the future of social media operations</h2>
+          <p className="landing-muted mx-auto mb-8 max-w-3xl">
+            By 2030, TevY2 is designed to become the social media operating system that businesses use to manage,
+            optimize, and monetize their full social presence.
+          </p>
+          <div className="flex flex-wrap justify-center gap-3">
+            <Link href="/setup" className="landing-btn-primary">
+              Join beta program
+            </Link>
+            <a href="mailto:partner@tevy2.ai" className="landing-btn-outline">
+              Partner with us
+            </a>
+            <a href="mailto:invest@tevy2.ai" className="landing-btn-outline">
+              Investor contact
+            </a>
           </div>
-          <div className="glass rounded-2xl p-8 border-[var(--accent)] glow">
-            <div className="text-sm text-[var(--accent-light)] mb-2">Pro</div>
-            <div className="text-4xl font-bold mb-1">$79<span className="text-lg text-[var(--muted)]">/mo</span></div>
-            <p className="text-sm text-[var(--muted)] mb-6">For serious growth</p>
-            <ul className="space-y-3 text-sm mb-8">
-              {["Everything in Starter", "Unlimited post drafts", "All social platforms", "Daily competitor tracking", "Market research reports", "Priority support"].map((f, i) => (
-                <li key={i} className="flex items-center gap-2">
-                  <span className="text-green-500">✓</span> {f}
-                </li>
-              ))}
-            </ul>
-            <Link href="/setup" className="btn-primary block text-center w-full">Start free trial →</Link>
-          </div>
-        </div>
-      </section>
-
-      {/* CTA */}
-      <section className="max-w-4xl mx-auto px-8 py-20 text-center">
-        <h2 className="text-3xl font-bold mb-4">Ready to hire your marketing agent?</h2>
-        <p className="text-[var(--muted)] mb-8">Set up in 2 minutes. No credit card required for trial.</p>
-        <Link href="/setup" className="btn-primary">
-          Get started free →
-        </Link>
-      </section>
-
-      {/* Footer */}
-      <footer className="border-t border-[var(--border)] py-8 mt-10">
-        <div className="max-w-6xl mx-auto px-8 flex flex-col md:flex-row justify-between items-center gap-4 text-sm text-[var(--muted)]">
-          <div className="flex items-center gap-3">
-            <span className="gradient-text font-bold">tevy2</span>.ai — AI marketing agents
-          </div>
-          <div className="flex items-center gap-4">
-            <span className="powered-badge">
-              <span style={{ fontSize: "14px" }}>🐾</span> Powered by OpenClaw
-            </span>
-            <span>·</span>
-            <a href="https://brainandbot.gg" className="hover:text-white transition">Brain&amp;Bots</a>
-          </div>
-        </div>
-      </footer>
+        </section>
+      </main>
     </div>
   );
 }
