@@ -89,10 +89,14 @@ mkdir -p /root/.openclaw
 
 cat > /root/.openclaw/config.yaml <<EOF
 gateway:
+  mode: local
   port: 18789
+  bind: custom
+  customBind: 0.0.0.0
+  auth: none
 workspace: /workspace
 channels:
-  ${CHAT_CHANNEL:-webchat}:
+  webchat:
     enabled: true
 providers:
   anthropic:
@@ -100,13 +104,14 @@ providers:
 model: "${MODEL:-claude-sonnet-4-20250514}"
 EOF
 
-# Add Telegram config if bot token provided
+# Add Telegram channel if bot token provided
 if [ -n "$TELEGRAM_BOT_TOKEN" ]; then
     cat >> /root/.openclaw/config.yaml <<EOF
   telegram:
     enabled: true
     botToken: "${TELEGRAM_BOT_TOKEN}"
 EOF
+    echo "  Telegram: enabled"
 fi
 
 # --- 3. Start OpenClaw gateway ---
