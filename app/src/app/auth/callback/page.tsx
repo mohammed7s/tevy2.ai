@@ -13,14 +13,8 @@ export default function AuthCallbackPage() {
     // The Supabase client auto-detects and exchanges them
     supabase.auth.onAuthStateChange((event, session) => {
       if (event === "SIGNED_IN" && session) {
-        // Check if there's a pending setup
-        const pendingSetup = sessionStorage.getItem("tevy2_pending_setup");
-        if (pendingSetup) {
-          sessionStorage.removeItem("tevy2_pending_setup");
-          router.push("/setup");
-        } else {
-          router.push("/dashboard");
-        }
+        // Always go to dashboard — onboarding happens there
+        router.push("/dashboard");
       }
     });
 
