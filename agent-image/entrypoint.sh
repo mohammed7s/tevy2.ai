@@ -8,10 +8,8 @@ echo "Business: ${BUSINESS_NAME:-unknown}"
 
 # --- 1. Generate workspace files from env vars ---
 
-# SOUL.md is static (copied from templates)
+# SOUL.md + AGENTS.md are static (from templates)
 cp /workspace/templates/SOUL.md /workspace/SOUL.md
-
-# AGENTS.md is static
 cp /workspace/templates/AGENTS.md /workspace/AGENTS.md
 
 # USER.md — generated from env vars
@@ -38,7 +36,6 @@ EOF
 # --- Memory files: only write if they DON'T already exist ---
 # (Persistent volume preserves them across restarts/updates)
 
-# Brand profile
 if [ ! -f /workspace/memory/brand-profile.md ]; then
     if [ -n "$BRAND_PROFILE_B64" ]; then
         echo "$BRAND_PROFILE_B64" | base64 -d > /workspace/memory/brand-profile.md
@@ -58,7 +55,6 @@ else
     echo "  brand-profile.md: exists (preserved)"
 fi
 
-# Competitors
 if [ ! -f /workspace/memory/competitors.md ] && [ -n "$COMPETITORS_B64" ]; then
     echo "$COMPETITORS_B64" | base64 -d > /workspace/memory/competitors.md
     echo "  competitors.md: created"
@@ -66,7 +62,6 @@ else
     echo "  competitors.md: $([ -f /workspace/memory/competitors.md ] && echo 'exists (preserved)' || echo 'skipped')"
 fi
 
-# Content calendar
 if [ ! -f /workspace/memory/content-calendar.md ]; then
     cat > /workspace/memory/content-calendar.md <<EOF
 # Content Calendar
@@ -84,41 +79,95 @@ else
     echo "  content-calendar.md: exists (preserved)"
 fi
 
-# --- 2. Configure OpenClaw via onboard ---
-echo "Running OpenClaw onboard..."
+# --- 2. Write OpenClaw config directly ---
+# Using the exact JSON format OpenClaw expects (openclaw.json, not yaml)
+mkdir -p /root/.openclaw
+
 GATEWAY_TOKEN=$(cat /proc/sys/kernel/random/uuid | tr -d '-')
-openclaw onboard \
-    --non-interactive \
-    --accept-risk \
-    --auth-choice token \
-    --token-provider anthropic \
-    --token "${ANTHROPIC_API_KEY}" \
-    --workspace /workspace \
-    --gateway-bind custom \
-    --gateway-port 18789 \
-    --gateway-auth token \
-    --gateway-token "${GATEWAY_TOKEN}" \
-    --skip-channels \
-    --flow quickstart
-echo "  Gateway token: ${GATEWAY_TOKEN}"
 
-# Set model
-openclaw config set model "${MODEL:-claude-sonnet-4-20250514}" 2>/dev/null || true
-
-# Bind to 0.0.0.0 so Docker can expose the port
-openclaw config set gateway.bind custom 2>/dev/null || true
-openclaw config set gateway.customBind "0.0.0.0" 2>/dev/null || true
-
-# Enable webchat
-openclaw config set channels.webchat.enabled true 2>/dev/null || true
-
-# Enable Telegram if token provided
+# Build telegram channel config if token provided
+TELEGRAM_CONFIG=""
 if [ -n "$TELEGRAM_BOT_TOKEN" ]; then
-    openclaw config set channels.telegram.enabled true 2>/dev/null || true
-    openclaw config set channels.telegram.botToken "${TELEGRAM_BOT_TOKEN}" 2>/dev/null || true
-    openclaw config set channels.telegram.dmPolicy open 2>/dev/null || true
+    TELEGRAM_CONFIG=$(cat <<EOJSON
+,
+    "telegram": {
+      "enabled": true,
+      "botToken": "${TELEGRAM_BOT_TOKEN}",
+      "dmPolicy": "open",
+      "streaming": true
+    }
+EOJSON
+)
     echo "  Telegram: enabled"
 fi
+
+cat > /root/.openclaw/openclaw.json <<EOJSON
+{
+  "wizard": {
+    "lastRunAt": "$(date -u +%Y-%m-%dT%H:%M:%S.000Z)",
+    "lastRunVersion": "2026.3.2",
+    "lastRunCommand": "onboard",
+    "lastRunMode": "local"
+  },
+  "auth": {
+    "profiles": {
+      "anthropic:default": {
+        "provider": "anthropic",
+        "mode": "token"
+      }
+    }
+  },
+  "gateway": {
+    "port": 18789,
+    "mode": "local",
+    "bind": "custom",
+    "customBind": "0.0.0.0",
+    "auth": {
+      "mode": "token",
+      "token": "${GATEWAY_TOKEN}"
+    }
+  },
+  "agents": {
+    "defaults": {
+      "workspace": "/workspace"
+    }
+  },
+  "channels": {
+    "webchat": {
+      "enabled": true
+    }${TELEGRAM_CONFIG}
+  },
+  "plugins": {
+    "entries": {
+      "telegram": {
+        "enabled": ${TELEGRAM_BOT_TOKEN:+true}${TELEGRAM_BOT_TOKEN:-false}
+      }
+    }
+  },
+  "model": "${MODEL:-claude-sonnet-4-20250514}"
+}
+EOJSON
+
+echo "  Config written to /root/.openclaw/openclaw.json"
+echo "  Gateway token: ${GATEWAY_TOKEN}"
+
+# Store API key where OpenClaw expects it (auth-profiles.json per agent)
+mkdir -p /root/.openclaw/agents/main/agent
+cat > /root/.openclaw/agents/main/agent/auth-profiles.json <<EOJSON
+{
+  "version": 1,
+  "profiles": {
+    "anthropic:default": {
+      "type": "token",
+      "provider": "anthropic",
+      "token": "${ANTHROPIC_API_KEY}"
+    }
+  },
+  "lastGood": {
+    "anthropic": "anthropic:default"
+  }
+}
+EOJSON
 
 # --- 3. Start OpenClaw gateway ---
 echo "Starting OpenClaw gateway..."
