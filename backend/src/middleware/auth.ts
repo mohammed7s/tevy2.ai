@@ -4,6 +4,15 @@ import { supabase } from "../lib/supabase.js";
 // Middleware: verify Supabase JWT from Authorization header
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export async function authMiddleware(c: Context<any>, next: Next) {
+  // Dev mode: bypass auth with mock user
+  if (process.env.DEV_BYPASS_AUTH === "true") {
+    c.set("userId", "dev-user-00000000-0000-0000-0000-000000000000");
+    c.set("userEmail", "dev@tevy2.ai");
+    c.set("accessToken", "dev-token");
+    await next();
+    return;
+  }
+
   const authHeader = c.req.header("Authorization");
   if (!authHeader?.startsWith("Bearer ")) {
     return c.json({ error: "Missing or invalid Authorization header" }, 401);
