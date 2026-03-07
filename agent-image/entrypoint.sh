@@ -159,10 +159,19 @@ fi
 echo "  Config written to /root/.openclaw/openclaw.json"
 echo "  Gateway token: ${GATEWAY_TOKEN}"
 
-# --- 3. Auto-fix any config issues ---
-echo "Running doctor --fix..."
-openclaw doctor --fix 2>&1 || true
+# --- 3. Fix permissions + create missing dirs ---
+chmod 700 /root/.openclaw
+chmod 600 /root/.openclaw/openclaw.json
+mkdir -p /root/.openclaw/agents/main/sessions
 
-# --- 4. Start OpenClaw gateway ---
+# Set node optimization env vars
+export NODE_COMPILE_CACHE=/var/tmp/openclaw-compile-cache
+mkdir -p /var/tmp/openclaw-compile-cache
+export OPENCLAW_NO_RESPAWN=1
+
+# Limit Node.js heap to fit in container memory
+export NODE_OPTIONS="--max-old-space-size=512"
+
+# --- 4. Start OpenClaw gateway (skip doctor to save memory) ---
 echo "Starting OpenClaw gateway..."
 exec openclaw gateway run
