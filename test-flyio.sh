@@ -196,7 +196,8 @@ cmd_test() {
             "CHAT_CHANNEL": "webchat",
             "TIMEZONE": "UTC",
             "ANTHROPIC_API_KEY": "$ANTHROPIC_API_KEY",
-            "MODEL": "claude-sonnet-4-20250514"
+            "MODEL": "claude-sonnet-4-20250514",
+            "TELEGRAM_BOT_TOKEN": "$TELEGRAM_BOT_TOKEN"
         },
         "mounts": $MOUNTS,
         "services": [
