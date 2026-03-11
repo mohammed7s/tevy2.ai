@@ -79,6 +79,40 @@ else
     echo "  content-calendar.md: exists (preserved)"
 fi
 
+# --- 1b. Create memory subdirectories (match PRD memory architecture) ---
+# These map to dashboard tabs:
+#   memory/seo/          → SEO tab (audit.md, keywords.md, deltas)
+#   memory/research/     → Research tab (YYYY-MM-DD.md digests)
+#   memory/conversations/ → internal (key-decisions.md)
+mkdir -p /workspace/memory/seo
+mkdir -p /workspace/memory/research
+mkdir -p /workspace/memory/conversations
+
+# Seed placeholder files if they don't exist (so tabs aren't empty)
+if [ ! -f /workspace/memory/seo/audit.md ]; then
+    cat > /workspace/memory/seo/audit.md <<EOF
+# SEO Audit
+
+> No audit run yet. Ask Tevy to run an SEO audit of your website.
+EOF
+fi
+
+if [ ! -f /workspace/memory/seo/keywords.md ]; then
+    cat > /workspace/memory/seo/keywords.md <<EOF
+# Keyword Research
+
+> No keyword research yet. Ask Tevy to research keywords for your niche.
+EOF
+fi
+
+if [ ! -f /workspace/memory/conversations/key-decisions.md ]; then
+    cat > /workspace/memory/conversations/key-decisions.md <<EOF
+# Key Decisions
+
+> Important preferences and decisions made by the business owner.
+EOF
+fi
+
 # --- 2. Write OpenClaw config directly ---
 mkdir -p /root/.openclaw /root/.openclaw/agents/main/agent
 
