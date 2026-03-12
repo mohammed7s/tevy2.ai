@@ -167,12 +167,8 @@ if tg_token:
     }
     config['plugins']['entries']['telegram'] = {'enabled': True}
 
-tavily_key = os.environ.get('TAVILY_API_KEY', '')
-if tavily_key:
-    config['tools'] = config.get('tools', {})
-    config['tools']['web'] = config['tools'].get('web', {})
-    config['tools']['web']['search'] = config['tools']['web'].get('search', {})
-    config['tools']['web']['search']['tavily'] = {'apiKey': tavily_key}
+# TAVILY_API_KEY is passed as env var — available to agent scripts
+# but NOT written into OpenClaw config (not a supported provider)
 
 with open('/root/.openclaw/openclaw.json', 'w') as f:
     json.dump(config, f, indent=2)
@@ -216,3 +212,4 @@ export NODE_OPTIONS="--max-old-space-size=1024"
 # --- 4. Start OpenClaw gateway (skip doctor to save memory) ---
 echo "Starting OpenClaw gateway..."
 exec openclaw gateway run
+
