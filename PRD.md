@@ -419,6 +419,53 @@ workspace/
 - [ ] **Tavily built-in:** Pre-configure Tavily API key in every agent instance for web search / browser access. Should be a master key injected via env vars at provisioning time (not user-provided).
 - [ ] **Show username on dashboard:** Display the logged-in user's name/email somewhere visible on the dashboard (sidebar, header, or account dropdown).
 
+## 16. X.com (Twitter) Integration
+
+### Goal
+Tevy can draft, schedule, and post to X.com on behalf of the user's business.
+
+### Architecture Options
+
+**Option A: X API v2 (Official — Recommended)**
+- Requires a corporate/business X Developer account
+- **Free tier:** Write-only, 1 app, 1,500 posts/month — enough for MVP
+- **Basic tier ($200/mo):** Read + write, 50K posts/month, 10K reads
+- Endpoint: `POST /2/tweets` for posting, `GET /2/users/:id/tweets` for reading
+- OAuth 2.0 PKCE for per-user auth (user connects their X account)
+- **Setup:** Apply at developer.x.com → create Project + App → get API keys
+- Master app owned by Brain&Bot / tevy2.ai, users OAuth connect
+
+**Option B: Postiz (Aggregator)**
+- Postiz supports X posting via their scheduler
+- Pro: Single integration covers multiple platforms
+- Con: Extra dependency, less control, Postiz needs its own X API keys anyway
+
+### Recommended Flow
+1. **tevy2.ai registers as X Developer** (corporate account under Brain&Bot)
+2. Get OAuth 2.0 Client ID + Client Secret
+3. User clicks "Connect X" on Connect tab → OAuth flow → we store their access token
+4. Tevy drafts posts → user approves → Tevy posts via X API v2
+5. For reading/analytics: pull user's recent tweets + metrics
+
+### API Keys Needed
+- X API Key (Consumer Key)
+- X API Key Secret (Consumer Secret)
+- OAuth 2.0 Client ID
+- OAuth 2.0 Client Secret
+- Per-user: OAuth access token + refresh token (stored in Supabase per instance)
+
+### Implementation
+- Backend: `POST /api/instances/:id/x/connect` — initiates OAuth flow
+- Backend: `GET /api/instances/:id/x/callback` — handles OAuth callback, stores tokens
+- Skill: `x-poster/SKILL.md` — posts to X via API, handles thread creation, media upload
+- Agent env: X access token injected per instance (from Supabase)
+
+### Considerations
+- Free tier has 1,500 posts/month limit — fine for MVP (most SMEs post 3-5x/week = ~20/mo)
+- Rate limits: 200 posts/15 min per user, 300 posts/15 min per app
+- Media upload: separate endpoint, max 5MB images, 512MB video
+- Threads: post first tweet, reply to it with each subsequent tweet
+
 ---
 
-*Created: 2026-03-04 | Last updated: 2026-03-09*
+*Created: 2026-03-04 | Last updated: 2026-03-12*
