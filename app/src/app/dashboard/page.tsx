@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import Link from "next/link";
 import { createInstance, listInstances } from "@/lib/api";
+import { signOut } from "@/lib/auth";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001";
 
@@ -23,10 +24,10 @@ const NAV_ITEMS = [
   { id: "home", icon: "🏠", label: "Home" },
   { id: "brand", icon: "🎯", label: "Brand" },
   { id: "calendar", icon: "📅", label: "Calendar" },
-  { id: "connect", icon: "🔗", label: "Connect" },
   { id: "analytics", icon: "📊", label: "Analytics" },
   { id: "research", icon: "🔍", label: "Research" },
   { id: "seo", icon: "🔎", label: "SEO" },
+  { id: "settings", icon: "⚙️", label: "Settings" },
 ];
 
 export default function DashboardPage() {
@@ -103,9 +104,12 @@ export default function DashboardPage() {
           {NAV_ITEMS.map((item) => (
             <button
               key={item.id}
-              onClick={() => hasInstance && setActiveTab(item.id)}
+              onClick={() => {
+                // Settings always accessible, others need instance
+                if (item.id === "settings" || hasInstance) setActiveTab(item.id);
+              }}
               className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm mb-0.5 transition-colors ${
-                !hasInstance ? "opacity-40 cursor-not-allowed" :
+                (!hasInstance && item.id !== "settings") ? "opacity-40 cursor-not-allowed" :
                 activeTab === item.id
                   ? "bg-[rgba(34,197,94,0.15)] text-white"
                   : "text-[var(--muted)] hover:text-white hover:bg-[var(--surface-light)]"
@@ -116,6 +120,24 @@ export default function DashboardPage() {
             </button>
           ))}
         </nav>
+
+        {/* Logout */}
+        <div className="px-3 py-4 border-t border-[var(--border)]">
+          <button
+            onClick={async () => {
+              await signOut();
+              localStorage.removeItem("tevy_instance_id");
+              localStorage.removeItem("tevy_instance_name");
+              localStorage.removeItem("tevy_webchat_url");
+              localStorage.removeItem("tevy_business_name");
+              window.location.href = "/login";
+            }}
+            className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-[var(--muted)] hover:text-red-400 hover:bg-[var(--surface-light)] transition-colors"
+          >
+            <span>🚪</span>
+            <span>Log out</span>
+          </button>
+        </div>
       </aside>
 
       {/* Main content */}
@@ -130,10 +152,10 @@ export default function DashboardPage() {
             {activeTab === "home" && <HomeTab instanceData={instanceData} />}
             {activeTab === "brand" && <BrandTab instanceData={instanceData} />}
             {activeTab === "calendar" && <CalendarTab />}
-            {activeTab === "connect" && <ConnectTab />}
             {activeTab === "analytics" && <AnalyticsTab />}
             {activeTab === "research" && <ResearchTab />}
             {activeTab === "seo" && <SEOTab />}
+            {activeTab === "settings" && <SettingsTab />}
           </>
         )}
       </main>
@@ -772,9 +794,9 @@ function CalendarTab() {
   );
 }
 
-/* ─── CONNECT TAB ─── */
-function ConnectTab() {
-  const channels = [
+/* ─── SETTINGS TAB ─── */
+function SettingsTab() {
+  const socialChannels = [
     { icon: "📸", name: "Instagram", status: "disconnected", detail: "Connect account", color: "#E4405F" },
     { icon: "🎵", name: "TikTok", status: "disconnected", detail: "Connect account", color: "#000000" },
     { icon: "💼", name: "LinkedIn", status: "disconnected", detail: "Connect page", color: "#0A66C2" },
@@ -784,12 +806,13 @@ function ConnectTab() {
 
   return (
     <div className="p-8 max-w-4xl">
-      <h1 className="text-2xl font-bold mb-1">Connected Accounts</h1>
-      <p className="text-[var(--muted)] mb-6">Manage your chat channels and social accounts.</p>
+      <h1 className="text-2xl font-bold mb-1">Settings</h1>
+      <p className="text-[var(--muted)] mb-8">Manage your channels, connections, and account.</p>
 
+      {/* Chat Channels */}
       <div className="mb-8">
         <h3 className="text-sm font-semibold text-[var(--muted)] uppercase tracking-wide mb-3">Chat Channel</h3>
-        <div className="glass rounded-xl p-4 flex items-center gap-4">
+        <div className="glass rounded-xl p-4 flex items-center gap-4 mb-2">
           <div className="w-10 h-10 rounded-lg bg-[#2AABEE] flex items-center justify-center text-white text-xl">✈️</div>
           <div className="flex-1">
             <div className="font-semibold text-sm">Telegram</div>
@@ -799,12 +822,31 @@ function ConnectTab() {
             🟢 Connected
           </span>
         </div>
+        {/* Coming soon channels */}
+        {[
+          { icon: "📱", name: "WhatsApp", bg: "#25D366" },
+          { icon: "🎮", name: "Discord", bg: "#5865F2" },
+          { icon: "💬", name: "Slack", bg: "#4A154B" },
+        ].map((ch) => (
+          <div key={ch.name} className="glass rounded-xl p-3 mb-2 opacity-40">
+            <div className="flex items-center gap-4">
+              <div className="w-10 h-10 rounded-lg flex items-center justify-center text-xl" style={{ background: ch.bg }}>
+                {ch.icon}
+              </div>
+              <div className="flex-1">
+                <span className="text-sm font-medium">{ch.name}</span>
+                <span className="text-xs text-[var(--muted)] ml-2">Coming soon</span>
+              </div>
+            </div>
+          </div>
+        ))}
       </div>
 
-      <div>
+      {/* Social Accounts */}
+      <div className="mb-8">
         <h3 className="text-sm font-semibold text-[var(--muted)] uppercase tracking-wide mb-3">Social Accounts</h3>
         <div className="space-y-2">
-          {channels.map((ch) => (
+          {socialChannels.map((ch) => (
             <div key={ch.name} className="glass rounded-xl p-4 flex items-center gap-4">
               <div className="w-10 h-10 rounded-lg flex items-center justify-center text-white text-xl" style={{ background: ch.color }}>
                 {ch.icon}
@@ -818,6 +860,47 @@ function ConnectTab() {
               </button>
             </div>
           ))}
+        </div>
+      </div>
+
+      {/* Agent Management */}
+      <div className="mb-8">
+        <h3 className="text-sm font-semibold text-[var(--muted)] uppercase tracking-wide mb-3">Agent</h3>
+        <div className="glass rounded-xl p-5">
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <div className="font-semibold text-sm">Your Marketing Agent</div>
+              <div className="text-xs text-[var(--muted)]">Powered by OpenClaw</div>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="w-2 h-2 rounded-full bg-green-500"></div>
+              <span className="text-xs text-green-400">Running</span>
+            </div>
+          </div>
+          <div className="flex gap-2">
+            <button className="px-3 py-1.5 rounded-lg text-xs bg-[var(--surface-light)] text-[var(--muted)] hover:text-white transition-colors">
+              Restart agent
+            </button>
+            <button className="px-3 py-1.5 rounded-lg text-xs bg-[var(--surface-light)] text-red-400/60 hover:text-red-400 transition-colors">
+              Delete agent
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* Account */}
+      <div>
+        <h3 className="text-sm font-semibold text-[var(--muted)] uppercase tracking-wide mb-3">Account</h3>
+        <div className="glass rounded-xl p-5">
+          <div className="flex items-center justify-between">
+            <div>
+              <div className="font-semibold text-sm">Plan: Starter</div>
+              <div className="text-xs text-[var(--muted)]">1 agent included</div>
+            </div>
+            <button className="px-3 py-1.5 rounded-lg text-xs bg-[var(--accent)] text-white hover:opacity-90 transition-opacity">
+              Upgrade plan
+            </button>
+          </div>
         </div>
       </div>
     </div>

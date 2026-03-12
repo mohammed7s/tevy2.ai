@@ -523,7 +523,48 @@ User Browser ──HTTPS──▶ Dashboard (Fly)
 
 ---
 
-## 18. X.com (Twitter) Integration
+## 18. Multi-Agent Support
+
+### Current State (MVP)
+- 1 agent per user (enforced in `POST /api/instances` — checks for existing instance)
+- Single marketing agent with fixed SOUL.md
+
+### Future: Multiple Agents Per User
+
+**Why:**
+- User wants separate agents for different brands/businesses
+- User wants specialized agents (one for social, one for SEO, one for research)
+- Agency use case: manage multiple client brands from one account
+
+**Architecture:**
+- Remove the 1-per-user check in instance creation
+- `GET /api/instances` already returns a list — frontend needs an agent switcher
+- Dashboard sidebar shows active agent with a dropdown to switch
+- Each agent has its own Fly machine, volume, memory, and channel config
+- Billing per agent (e.g. $29/agent/month)
+
+**Plan tiers:**
+| Plan | Agents | Price |
+|------|--------|-------|
+| Starter | 1 | $29/mo |
+| Pro | 3 | $79/mo |
+| Agency | 10 | $199/mo |
+| Enterprise | Unlimited | Custom |
+
+**UI Changes:**
+- Agent switcher in sidebar (dropdown or list)
+- "New Agent" button in settings
+- Each agent can have a custom name and avatar
+- Settings tab shows all agents with start/stop/delete controls
+
+**Backend Changes:**
+- Remove `existing.length > 0` check in POST /api/instances
+- Add plan-based agent limit enforcement
+- Add `agent_name` and `agent_avatar` columns to instances table
+
+---
+
+## 19. X.com (Twitter) Integration
 
 ### Goal
 Tevy can draft, schedule, and post to X.com on behalf of the user's business.
