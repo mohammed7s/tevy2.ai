@@ -116,7 +116,8 @@ fi
 # --- 2. Write OpenClaw config directly ---
 mkdir -p /root/.openclaw /root/.openclaw/agents/main/agent
 
-GATEWAY_TOKEN=$(cat /proc/sys/kernel/random/uuid | tr -d '-')
+# Use token from backend (stored in DB for API proxy) or generate fallback
+GATEWAY_TOKEN=${GATEWAY_TOKEN:-$(cat /proc/sys/kernel/random/uuid | tr -d '-')}
 
 # Use python3 to generate valid JSON (avoids shell escaping issues with tokens)
 python3 -c "

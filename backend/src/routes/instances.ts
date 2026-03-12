@@ -66,9 +66,13 @@ instances.post("/", async (c) => {
   const slug = slugify(body.businessName);
   const instanceName = `tevy-${slug}-${Date.now().toString(36)}`;
 
+  // Generate gateway token — stored in DB so we can proxy API calls to the agent
+  const gatewayToken = crypto.randomUUID().replace(/-/g, "");
+
   // Build env vars for the agent container
   const agentEnv: Record<string, string> = {
     INSTANCE_ID: instanceName,
+    GATEWAY_TOKEN: gatewayToken,
     OWNER_NAME: body.ownerName || "",
     BUSINESS_NAME: body.businessName,
     WEBSITE_URL: body.websiteUrl || "",
@@ -114,6 +118,7 @@ instances.post("/", async (c) => {
         chat_channel: body.chatChannel || "webchat",
         business_name: body.businessName,
         website_url: body.websiteUrl || null,
+        gateway_token: gatewayToken,
         config: {
           ownerName: body.ownerName,
           socials: {
@@ -386,6 +391,48 @@ instances.post("/:id/update", async (c) => {
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : "Update failed";
     return c.json({ error: message }, 500);
+  }
+});
+
+// GET /api/instances/:id/files/* — proxy file reads from agent workspace
+instances.get("/:id/files/*", async (c) => {
+  const userId = c.get("userId") as string;
+  const instanceId = c.req.param("id");
+  const filePath = c.req.path.split("/files/")[1];
+
+  if (!filePath) return c.json({ error: "File path required" }, 400);
+
+  // Block path traversal
+  if (filePath.includes("..") || filePath.startsWith("/")) {
+    return c.json({ error: "Invalid path" }, 400);
+  }
+
+  const { data, error } = await supabase
+    .from("instances")
+    .select("fly_machine_name, gateway_token")
+    .eq("id", instanceId)
+    .eq("user_id", userId)
+    .single();
+
+  if (error || !data || !data.gateway_token) {
+    return c.json({ error: "Instance not found" }, 404);
+  }
+
+  const agentUrl = `https://${data.fly_machine_name}.fly.dev`;
+  try {
+    const res = await fetch(`${agentUrl}/api/files/${filePath}`, {
+      headers: { Authorization: `Bearer ${data.gateway_token}` },
+      signal: AbortSignal.timeout(10000),
+    });
+
+    if (!res.ok) {
+      return c.json({ error: `Agent returned ${res.status}` }, res.status as 404 | 500);
+    }
+
+    const content = await res.text();
+    return c.json({ path: filePath, content });
+  } catch {
+    return c.json({ error: "Agent not reachable" }, 503);
   }
 });
 

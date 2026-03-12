@@ -419,7 +419,57 @@ workspace/
 - [ ] **Tavily built-in:** Pre-configure Tavily API key in every agent instance for web search / browser access. Should be a master key injected via env vars at provisioning time (not user-provided).
 - [ ] **Show username on dashboard:** Display the logged-in user's name/email somewhere visible on the dashboard (sidebar, header, or account dropdown).
 
-## 16. X.com (Twitter) Integration
+## 16. Data Archival & Recovery
+
+### Problem
+When a Fly machine is destroyed (user deletes instance, billing lapse, Fly outage), the persistent volume is deleted too. The user's brand profile, research, content calendar, and conversation history are lost.
+
+### Solution: Periodic Archive to Supabase Storage
+
+**How it works:**
+1. Each agent instance has a cron job (or heartbeat task) that periodically archives its `memory/` directory
+2. Archive is a tarball uploaded to Supabase Storage (S3-compatible, included in free tier)
+3. Backend stores archive metadata in `instance_archives` table
+4. On instance recreation, the entrypoint checks for an existing archive and restores from it
+
+**Archive frequency:** Every 6 hours + on graceful shutdown
+
+**What gets archived:**
+- `memory/` (brand profile, competitors, calendar, research, SEO, conversations)
+- `SOUL.md`, `USER.md`, `AGENTS.md` (in case agent customized them)
+
+**What does NOT get archived:**
+- OpenClaw sessions/chat history (ephemeral by design)
+- Credentials, API keys, tokens
+
+**Recovery flow:**
+1. User creates new instance (or admin restores)
+2. Backend checks `instance_archives` for latest archive matching user_id
+3. If found: passes `ARCHIVE_URL` env var to the machine
+4. Entrypoint downloads + extracts archive before starting gateway
+5. Agent wakes up with all its memory intact
+
+**Schema:**
+```sql
+CREATE TABLE instance_archives (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID NOT NULL,
+  instance_id UUID NOT NULL,
+  archive_url TEXT NOT NULL,         -- Supabase Storage path
+  archive_size_bytes BIGINT,
+  file_count INT,
+  created_at TIMESTAMPTZ DEFAULT now()
+);
+```
+
+**Implementation options:**
+- **Option A (agent-side):** Add a skill or cron that runs `tar + curl` to upload to Supabase Storage. Simple but requires storage credentials in the agent.
+- **Option B (backend-side):** Backend periodically reads files via gateway proxy (`/api/instances/:id/files/`) and creates the archive server-side. No credentials in agent but slower.
+- **Recommended:** Option A for speed + simplicity. Storage credentials are scoped (write-only to user's bucket prefix).
+
+---
+
+## 17. X.com (Twitter) Integration
 
 ### Goal
 Tevy can draft, schedule, and post to X.com on behalf of the user's business.
