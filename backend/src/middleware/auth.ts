@@ -7,7 +7,7 @@ import { supabase } from "../lib/supabase.js";
 export async function authMiddleware(c: Context<any>, next: Next) {
   // Dev mode: bypass auth with mock user
   if (process.env.DEV_BYPASS_AUTH === "true") {
-    c.set("userId", "dev-user-00000000-0000-0000-0000-000000000000");
+    c.set("userId", "00000000-0000-0000-0000-000000000000");
     c.set("userEmail", "dev@tevy2.ai");
     c.set("accessToken", "dev-token");
     await next();
