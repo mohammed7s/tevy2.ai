@@ -59,18 +59,17 @@ export default function DashboardPage() {
           localStorage.setItem("tevy_instance_id", data.id);
           localStorage.setItem("tevy_instance_name", data.name);
           localStorage.setItem("tevy_webchat_url", data.webchatUrl);
+        } else {
+          // API returned empty — clear stale localStorage
+          localStorage.removeItem("tevy_instance_id");
+          localStorage.removeItem("tevy_instance_name");
+          localStorage.removeItem("tevy_webchat_url");
+          localStorage.removeItem("tevy_business_name");
         }
       } catch {
-        // Not logged in or API down — fall back to localStorage
-        const savedId = localStorage.getItem("tevy_instance_id");
-        if (savedId) {
-          setInstanceData({
-            id: savedId,
-            name: localStorage.getItem("tevy_instance_name") || "",
-            webchatUrl: localStorage.getItem("tevy_webchat_url") || "",
-          });
-          setHasInstance(true);
-        }
+        // API unreachable — don't fall back to localStorage (avoids stale state)
+        // User will see the wizard; if they already have an instance it'll show on next load
+        console.warn("Could not reach API to check instances");
       }
     }
     hydrate();
