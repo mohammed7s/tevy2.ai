@@ -149,7 +149,7 @@ config = {
     'agents': {
         'defaults': {
             'workspace': '/workspace',
-            'model': os.environ.get('MODEL', 'claude-sonnet-4-20250514')
+            'model': os.environ.get('MODEL', 'anthropic/claude-sonnet-4-20250514')
         }
     },
     'channels': {},
