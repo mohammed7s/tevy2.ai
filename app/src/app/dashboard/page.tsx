@@ -477,64 +477,135 @@ function OnboardingPanel({ onComplete }: { onComplete: (data: { id: string; name
   );
 }
 
-/* ─── HOME TAB (with embedded chat) ─── */
+/* ─── HOME TAB (dashboard + chat widget) ─── */
 function HomeTab({ instanceData }: { instanceData: { id: string; name: string; webchatUrl: string } | null }) {
-  const webchatUrl = instanceData?.webchatUrl || localStorage.getItem("tevy_webchat_url") || "";
+  const [chatOpen, setChatOpen] = useState(false);
+  const [chatInput, setChatInput] = useState("");
+  const instanceName = instanceData?.name || localStorage.getItem("tevy_instance_name") || "";
 
   return (
-    <div className="h-full flex flex-col">
-      {/* Header */}
-      <div className="px-8 pt-6 pb-4 border-b border-[var(--border)]">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-bold mb-1">Chat with Tevy</h1>
-            <p className="text-[var(--muted)] text-sm">Your AI marketing assistant</p>
+    <div className="h-full flex flex-col relative">
+      {/* Dashboard content */}
+      <div className="flex-1 overflow-auto p-8 max-w-4xl">
+        <h1 className="text-2xl font-bold mb-1">Dashboard</h1>
+        <p className="text-[var(--muted)] mb-8">Your marketing agent is live and ready.</p>
+
+        {/* Status cards */}
+        <div className="grid grid-cols-3 gap-4 mb-8">
+          <div className="glass rounded-xl p-4">
+            <div className="text-xs text-[var(--muted)] mb-1">Agent Status</div>
+            <div className="flex items-center gap-2">
+              <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></div>
+              <span className="text-lg font-bold text-green-400">Online</span>
+            </div>
+            <div className="text-xs text-[var(--muted)] mt-1">Telegram connected</div>
           </div>
-          <div className="flex items-center gap-2">
-            <div className="w-2 h-2 rounded-full bg-green-500"></div>
-            <span className="text-xs text-[var(--muted)]">Online</span>
+          <div className="glass rounded-xl p-4">
+            <div className="text-xs text-[var(--muted)] mb-1">Chat Channel</div>
+            <div className="text-lg font-bold">Telegram</div>
+            <div className="text-xs text-[var(--muted)] mt-1">Receiving messages</div>
+          </div>
+          <div className="glass rounded-xl p-4">
+            <div className="text-xs text-[var(--muted)] mb-1">Instance</div>
+            <div className="text-sm font-bold font-mono truncate">{instanceName}</div>
+            <div className="text-xs text-[var(--muted)] mt-1">Amsterdam (AMS)</div>
           </div>
         </div>
 
-        {/* Quick suggestions */}
-        <div className="flex gap-2 mt-4 flex-wrap">
-          {[
-            "Analyze my website",
-            "Draft 3 social posts",
-            "Research my competitors",
-            "Run an SEO audit",
-          ].map((suggestion) => (
-            <button
-              key={suggestion}
-              className="px-3 py-1.5 rounded-full text-xs bg-[var(--surface-light)] text-[var(--muted)] hover:text-white hover:bg-[var(--surface)] border border-[var(--border)] transition-colors"
-            >
-              {suggestion}
-            </button>
-          ))}
+        {/* Quick actions */}
+        <div className="glass rounded-xl p-6 mb-6">
+          <h3 className="font-semibold mb-3">Get started</h3>
+          <p className="text-sm text-[var(--muted)] mb-4">
+            Message Tevy on Telegram or use the chat below. Try these:
+          </p>
+          <div className="flex gap-2 flex-wrap">
+            {[
+              "Analyze my website",
+              "Draft 3 social posts",
+              "Research my competitors",
+              "Run an SEO audit",
+              "Create a content calendar",
+            ].map((suggestion) => (
+              <button
+                key={suggestion}
+                onClick={() => { setChatOpen(true); setChatInput(suggestion); }}
+                className="px-3 py-1.5 rounded-full text-xs bg-[var(--surface-light)] text-[var(--muted)] hover:text-white hover:bg-[var(--surface)] border border-[var(--border)] transition-colors"
+              >
+                {suggestion}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Activity placeholder */}
+        <div className="glass rounded-xl p-6">
+          <h3 className="font-semibold mb-3">Recent Activity</h3>
+          <div className="text-center py-6">
+            <div className="text-2xl mb-2">📋</div>
+            <p className="text-sm text-[var(--muted)]">
+              Activity will appear here once you start chatting with Tevy.
+            </p>
+          </div>
         </div>
       </div>
 
-      {/* Chat area */}
-      <div className="flex-1 min-h-0">
-        {webchatUrl ? (
-          <iframe
-            src={webchatUrl}
-            className="w-full h-full border-0"
-            allow="clipboard-write"
-            title="Tevy Chat"
-          />
-        ) : (
-          <div className="flex items-center justify-center h-full">
-            <div className="text-center">
-              <div className="text-4xl mb-3">💬</div>
-              <h2 className="text-lg font-semibold mb-2">Chat is connecting...</h2>
+      {/* Chat widget — bottom right */}
+      {chatOpen ? (
+        <div className="absolute bottom-4 right-4 w-96 h-[28rem] glass rounded-xl border border-[var(--border)] flex flex-col shadow-2xl overflow-hidden" style={{ zIndex: 50 }}>
+          {/* Chat header */}
+          <div className="px-4 py-3 border-b border-[var(--border)] flex items-center justify-between shrink-0">
+            <div className="flex items-center gap-2">
+              <div className="w-2 h-2 rounded-full bg-green-500"></div>
+              <span className="text-sm font-semibold">Tevy</span>
+            </div>
+            <button
+              onClick={() => setChatOpen(false)}
+              className="text-[var(--muted)] hover:text-white text-lg"
+            >
+              ✕
+            </button>
+          </div>
+
+          {/* Chat messages area */}
+          <div className="flex-1 overflow-auto p-4">
+            <div className="text-center py-8">
+              <div className="text-2xl mb-2">💬</div>
               <p className="text-sm text-[var(--muted)]">
-                Use Telegram in the meantime — your bot is already live there.
+                Chat with Tevy here or via Telegram.
+              </p>
+              <p className="text-xs text-[var(--muted)] mt-2">
+                Webchat integration coming soon.<br />
+                For now, use your Telegram bot.
               </p>
             </div>
           </div>
-        )}
-      </div>
+
+          {/* Chat input */}
+          <div className="px-3 py-3 border-t border-[var(--border)] shrink-0">
+            <div className="flex gap-2">
+              <input
+                className="input-field !py-2 text-sm flex-1"
+                placeholder="Message Tevy..."
+                value={chatInput}
+                onChange={(e) => setChatInput(e.target.value)}
+                onKeyDown={(e) => { if (e.key === "Enter") { /* TODO: send via API */ setChatInput(""); } }}
+              />
+              <button className="px-3 py-2 rounded-lg bg-[var(--accent)] text-white text-sm hover:opacity-90 transition-opacity">
+                →
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : (
+        /* Chat toggle button */
+        <button
+          onClick={() => setChatOpen(true)}
+          className="absolute bottom-6 right-6 w-14 h-14 rounded-full bg-[var(--accent)] text-white text-xl flex items-center justify-center shadow-lg hover:scale-105 transition-transform"
+          style={{ zIndex: 50 }}
+        >
+          💬
+        </button>
+      )}
     </div>
   );
 }
