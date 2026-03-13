@@ -1,9 +1,10 @@
 "use client";
 
 import { useState, useEffect, useCallback, useRef } from "react";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { createInstance, listInstances, triggerTask, readAgentFile } from "@/lib/api";
-import { signOut } from "@/lib/auth";
+import { signOut, isAuthenticated, getUser, getSessionToken } from "@/lib/auth";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001";
 
@@ -31,8 +32,11 @@ const NAV_ITEMS = [
 ];
 
 export default function DashboardPage() {
+  const router = useRouter();
   const [hasInstance, setHasInstance] = useState(false);
   const [activeTab, setActiveTab] = useState("home");
+  const [userEmail, setUserEmail] = useState<string | null>(null);
+  const [authChecked, setAuthChecked] = useState(false);
   const [instanceData, setInstanceData] = useState<{
     id: string;
     name: string;
@@ -40,8 +44,26 @@ export default function DashboardPage() {
     config?: Record<string, unknown>;
   } | null>(null);
 
+  // Auth guard
+  useEffect(() => {
+    if (!isAuthenticated()) {
+      router.push("/login");
+      return;
+    }
+    // Load user info
+    getUser().then((user) => {
+      if (!user) {
+        router.push("/login");
+        return;
+      }
+      setUserEmail(user.email);
+      setAuthChecked(true);
+    });
+  }, [router]);
+
   // Hydrate from API on mount — checks if user already has an instance
   useEffect(() => {
+    if (!authChecked) return;
     async function hydrate() {
       try {
         const { instances } = await listInstances();
@@ -80,7 +102,19 @@ export default function DashboardPage() {
       }
     }
     hydrate();
-  }, []);
+  }, [authChecked]);
+
+  // Show loading while checking auth
+  if (!authChecked) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-8 h-8 border-2 border-[var(--accent)] border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-[var(--muted)]">Loading...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen flex">
@@ -127,15 +161,16 @@ export default function DashboardPage() {
           ))}
         </nav>
 
-        {/* Logout */}
+        {/* User info + Logout */}
         <div className="px-3 py-4 border-t border-[var(--border)]">
+          {userEmail && (
+            <div className="px-3 py-2 mb-2 text-xs text-[var(--muted)] truncate">
+              {userEmail}
+            </div>
+          )}
           <button
             onClick={async () => {
               await signOut();
-              localStorage.removeItem("tevy_instance_id");
-              localStorage.removeItem("tevy_instance_name");
-              localStorage.removeItem("tevy_webchat_url");
-              localStorage.removeItem("tevy_business_name");
               window.location.href = "/login";
             }}
             className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-[var(--muted)] hover:text-red-400 hover:bg-[var(--surface-light)] transition-colors"
@@ -203,7 +238,7 @@ function OnboardingPanel({ onComplete }: { onComplete: (data: { id: string; name
   }, []);
 
   const pollBootStatus = useCallback((instanceId: string) => {
-    const token = localStorage.getItem("tevy_session_token") || "";
+    const token = getSessionToken() || "";
     pollRef.current = setInterval(async () => {
       try {
         const res = await fetch(`${API_URL}/api/instances/${instanceId}/boot-status`, {
@@ -1070,55 +1105,20 @@ function AnalyticsTab() {
 
 /* ─── RESEARCH TAB ─── */
 function ResearchTab() {
-  // This tab will be connected to instanceData in a future pass
-  // For now it reads from the first instance in localStorage
   const [content, setContent] = useState<string | null>(null);
-  const [loading, setLoading] = useState(false);
   const instanceId = localStorage.getItem("tevy_instance_id") || "";
 
   useEffect(() => {
     if (!instanceId) return;
-    // Try to load latest research file
     readAgentFile(instanceId, "memory/research/latest.md")
       .then((res) => { if (res.content) setContent(res.content); })
       .catch(() => { /* no file yet */ });
   }, [instanceId]);
 
-  const handleTrigger = async () => {
-    if (!instanceId) return;
-    setLoading(true);
-    try {
-      await triggerTask(instanceId, "Research my competitors and market trends. Analyze what they're posting on social media, identify industry trends, and write a research digest. Save to memory/research/latest.md");
-    } catch { /* */ }
-    // Poll for file
-    let attempts = 0;
-    const poll = setInterval(async () => {
-      attempts++;
-      try {
-        const file = await readAgentFile(instanceId, "memory/research/latest.md");
-        if (file.content) { setContent(file.content); setLoading(false); clearInterval(poll); }
-      } catch { /* */ }
-      if (attempts > 12) { setLoading(false); clearInterval(poll); }
-    }, 10000);
-  };
-
   return (
     <div className="p-8 max-w-4xl">
-      <div className="flex items-center justify-between mb-6">
-        <div>
-          <h1 className="text-2xl font-bold mb-1">Market Research</h1>
-          <p className="text-[var(--muted)]">Competitor intel and market trends</p>
-        </div>
-        <button
-          onClick={handleTrigger}
-          disabled={loading}
-          className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
-            loading ? "bg-[var(--surface-light)] text-[var(--muted)] cursor-wait" : "bg-[var(--accent)] text-white hover:opacity-90"
-          }`}
-        >
-          {loading ? "⏳ Researching..." : "🔍 Run research"}
-        </button>
-      </div>
+      <h1 className="text-2xl font-bold mb-1">Market Research</h1>
+      <p className="text-[var(--muted)] mb-6">Competitor intel and market trends</p>
 
       {content ? (
         <div className="glass rounded-xl p-6">
@@ -1129,10 +1129,13 @@ function ResearchTab() {
           <div className="text-4xl mb-3">🔍</div>
           <h2 className="text-lg font-semibold mb-2">No research yet</h2>
           <p className="text-sm text-[var(--muted)] mb-4">
-            Click &quot;Run research&quot; or ask Tevy via Telegram:
+            Ask Tevy via Telegram to research your market:
           </p>
           <p className="text-xs text-[var(--muted)] font-mono">
             &quot;Research my top competitors and what they&apos;re posting&quot;
+          </p>
+          <p className="text-xs text-[var(--muted)] mt-4">
+            Results will appear here automatically once generated.
           </p>
         </div>
       )}

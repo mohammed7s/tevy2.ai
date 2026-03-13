@@ -13,7 +13,8 @@
     "@hono/node-server": "^1.13.8",
     "@supabase/supabase-js": "^2.49.1",
     "dotenv": "^16.4.7",
-    "hono": "^4.7.4"
+    "hono": "^4.7.4",
+    "stytch": "^13.1.0"
   },
   "devDependencies": {
     "@types/node": "^22.13.0",

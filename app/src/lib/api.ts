@@ -1,4 +1,4 @@
-import { getAccessToken } from "./auth";
+import { getAccessToken, signOut } from "./auth";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001";
 
@@ -11,6 +11,14 @@ async function api<T>(path: string, options: ApiOptions = {}): Promise<T> {
   const { method = "GET", body } = options;
 
   const token = await getAccessToken();
+
+  if (!token && !path.startsWith("/api/auth")) {
+    // Not authenticated — redirect to login
+    if (typeof window !== "undefined") {
+      window.location.href = "/login";
+    }
+    throw new Error("Not authenticated");
+  }
 
   const headers: Record<string, string> = {
     "Content-Type": "application/json",
@@ -25,6 +33,15 @@ async function api<T>(path: string, options: ApiOptions = {}): Promise<T> {
     headers,
     body: body ? JSON.stringify(body) : undefined,
   });
+
+  // Handle auth expiry
+  if (res.status === 401) {
+    signOut();
+    if (typeof window !== "undefined") {
+      window.location.href = "/login";
+    }
+    throw new Error("Session expired");
+  }
 
   const data = await res.json();
 

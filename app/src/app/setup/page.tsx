@@ -1,24 +1,33 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { sendMagicLink } from "@/lib/auth";
+import { sendMagicLink, isAuthenticated } from "@/lib/auth";
 
 export default function SetupPage() {
   const router = useRouter();
   const [email, setEmail] = useState("");
   const [sent, setSent] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
   const [cooldown, setCooldown] = useState(0);
 
+  // Redirect if already logged in
+  useEffect(() => {
+    if (isAuthenticated()) {
+      router.push("/dashboard");
+    }
+  }, [router]);
+
   // Cooldown timer
-  useState(() => {
-    const interval = setInterval(() => {
+  useEffect(() => {
+    if (cooldown <= 0) return;
+    const timer = setInterval(() => {
       setCooldown((c) => (c > 0 ? c - 1 : 0));
     }, 1000);
-    return () => clearInterval(interval);
-  });
+    return () => clearInterval(timer);
+  }, [cooldown]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -26,9 +35,10 @@ export default function SetupPage() {
 
     try {
       setError(null);
+      setLoading(true);
       await sendMagicLink(email);
       setSent(true);
-      setCooldown(60); // 60s cooldown to avoid rate limits
+      setCooldown(60);
     } catch (err) {
       const msg = err instanceof Error ? err.message : "Failed to send link";
       if (msg.includes("rate") || msg.includes("too many") || msg.includes("429")) {
@@ -37,13 +47,8 @@ export default function SetupPage() {
       } else {
         setError(msg);
       }
-    }
-
-    // Mock auth for local dev
-    if (process.env.NEXT_PUBLIC_MOCK_AUTH === "true") {
-      setTimeout(() => {
-        router.push("/dashboard");
-      }, 2000);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -109,9 +114,9 @@ export default function SetupPage() {
               <button
                 type="submit"
                 className="btn-primary w-full"
-                disabled={!email || !email.includes("@") || cooldown > 0}
+                disabled={!email || !email.includes("@") || cooldown > 0 || loading}
               >
-                {cooldown > 0 ? `Wait ${cooldown}s` : "Continue →"}
+                {loading ? "Sending..." : cooldown > 0 ? `Wait ${cooldown}s` : "Continue →"}
               </button>
 
               <p className="text-center text-xs text-[var(--muted)]">

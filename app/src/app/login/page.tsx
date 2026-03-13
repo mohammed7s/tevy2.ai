@@ -1,13 +1,23 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
-import { sendMagicLink } from "@/lib/auth";
+import { useRouter } from "next/navigation";
+import { sendMagicLink, isAuthenticated } from "@/lib/auth";
 
 export default function LoginPage() {
+  const router = useRouter();
   const [email, setEmail] = useState("");
   const [sent, setSent] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+
+  // Redirect if already logged in
+  useEffect(() => {
+    if (isAuthenticated()) {
+      router.push("/dashboard");
+    }
+  }, [router]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -15,10 +25,13 @@ export default function LoginPage() {
 
     try {
       setError(null);
+      setLoading(true);
       await sendMagicLink(email);
       setSent(true);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to send link");
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -42,7 +55,7 @@ export default function LoginPage() {
               We sent a magic link to <strong>{email}</strong>
             </p>
             <p className="text-xs text-[var(--muted)]">
-              Click the link in the email to log in. You can close this tab.
+              Click the link in the email to log in.
             </p>
             <button
               onClick={() => setSent(false)}
@@ -71,9 +84,9 @@ export default function LoginPage() {
             <button
               type="submit"
               className="btn-primary w-full"
-              disabled={!email || !email.includes("@")}
+              disabled={!email || !email.includes("@") || loading}
             >
-              Send magic link →
+              {loading ? "Sending..." : "Send magic link →"}
             </button>
 
             <p className="text-center text-sm text-[var(--muted)]">

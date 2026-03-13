@@ -1,30 +1,42 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
-import { supabase } from "@/lib/supabase";
+import { useRouter, useSearchParams } from "next/navigation";
+import { authenticateToken } from "@/lib/auth";
+import { Suspense } from "react";
 
-export default function AuthCallbackPage() {
+function AuthCallbackContent() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    // Supabase puts tokens in the URL hash after magic link click
-    // The Supabase client auto-detects and exchanges them
-    supabase.auth.onAuthStateChange((event, session) => {
-      if (event === "SIGNED_IN" && session) {
-        // Always go to dashboard — onboarding happens there
-        router.push("/dashboard");
-      }
-    });
+    async function handleCallback() {
+      // Stytch magic link puts token in query params: ?token=xxx&stytch_token_type=magic_links
+      const token = searchParams.get("token");
+      const tokenType = searchParams.get("stytch_token_type");
 
-    // Also handle errors from the URL
-    const hashParams = new URLSearchParams(window.location.hash.substring(1));
-    const errorDesc = hashParams.get("error_description");
-    if (errorDesc) {
-      setError(errorDesc);
+      if (!token) {
+        setError("No authentication token found. Please try logging in again.");
+        return;
+      }
+
+      if (tokenType && tokenType !== "magic_links") {
+        setError(`Unsupported token type: ${tokenType}`);
+        return;
+      }
+
+      try {
+        await authenticateToken(token);
+        router.push("/dashboard");
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : "Authentication failed";
+        setError(msg);
+      }
     }
-  }, [router]);
+
+    handleCallback();
+  }, [router, searchParams]);
 
   if (error) {
     return (
@@ -48,5 +60,20 @@ export default function AuthCallbackPage() {
         <p className="text-[var(--muted)]">Verifying your email...</p>
       </div>
     </div>
+  );
+}
+
+export default function AuthCallbackPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-8 h-8 border-2 border-[var(--accent)] border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-[var(--muted)]">Loading...</p>
+        </div>
+      </div>
+    }>
+      <AuthCallbackContent />
+    </Suspense>
   );
 }
