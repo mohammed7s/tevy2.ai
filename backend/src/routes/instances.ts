@@ -465,19 +465,18 @@ instances.get("/:id/boot-status", async (c) => {
       return c.json({ stage: "offline", progress: 0, message: `Machine is ${flyState}`, ready: false });
     }
 
-    // Machine is "started" — probe the gateway
+    // Machine is "started" — check how long it's been running
     const webchatUrl = `https://${data.fly_machine_name}.fly.dev`;
-    try {
-      const probe = await fetch(`${webchatUrl}/__openclaw__/health`, {
-        signal: AbortSignal.timeout(5000),
-      });
-      if (probe.ok) {
-        return c.json({ stage: "ready", progress: 100, message: "Agent online!", ready: true, webchatUrl });
-      }
-      // Gateway responded but not healthy yet
-      return c.json({ stage: "booting", progress: 70, message: "Connecting channels...", ready: false });
-    } catch {
-      // Gateway not responding yet — still booting
+    const createdAt = new Date(data.created_at).getTime();
+    const uptimeMs = Date.now() - createdAt;
+
+    // Gateway typically takes ~60-90s to fully boot after machine starts
+    if (uptimeMs > 120_000) {
+      // Running for >2 min — safe to assume ready
+      return c.json({ stage: "ready", progress: 100, message: "Agent online!", ready: true, webchatUrl });
+    } else if (uptimeMs > 60_000) {
+      return c.json({ stage: "channels", progress: 80, message: "Connecting channels...", ready: false });
+    } else {
       return c.json({ stage: "booting", progress: 50, message: "Booting AI engine...", ready: false });
     }
   } catch (err: unknown) {
