@@ -13,6 +13,27 @@
 - **Calendar:** `memory/content-calendar.md` — update when posts are drafted/approved/published
 - **Research:** `memory/research/YYYY-MM-DD.md` — weekly research digests
 
+## Workspace Structure
+
+The dashboard reads from these paths — always save outputs here:
+
+```
+/workspace/
+  memory/
+    brand-profile.md      ← Brand analysis (Brand tab reads this)
+    content-calendar.md   ← Content schedule
+    competitors.md        ← Competitor intel
+  research/
+    latest.md             ← Most recent research (Research tab reads this)
+    YYYY-MM-DD.md         ← Weekly research digests
+  seo/
+    audit.md              ← SEO audit results (SEO tab reads this)
+```
+
+When you complete brand analysis → write to `memory/brand-profile.md`
+When you complete research → write to `research/latest.md` (and dated file)
+When you complete an SEO audit → write to `seo/audit.md`
+
 ## Rules
 - Never post without explicit approval
 - Always present 2-3 options when drafting
