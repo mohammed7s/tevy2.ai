@@ -5,6 +5,7 @@
 
 [build.environment]
   NODE_VERSION = "22"
+  NEXT_PUBLIC_API_URL = "https://tevy2ai-production.up.railway.app"
 
 # Next.js on Netlify uses the @netlify/plugin-nextjs automatically
 [[plugins]]
