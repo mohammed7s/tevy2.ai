@@ -23,10 +23,20 @@ export const env = {
   SUPABASE_ANON_KEY: required("SUPABASE_ANON_KEY"),
   SUPABASE_SERVICE_ROLE_KEY: required("SUPABASE_SERVICE_ROLE_KEY"),
 
-  // Fly.io
-  FLY_API_TOKEN: required("FLY_API_TOKEN"),
+  // Infrastructure provider: "fly" or "docker"
+  INFRA_PROVIDER: optional("INFRA_PROVIDER", "docker"),
+
+  // Fly.io (only needed if INFRA_PROVIDER=fly)
+  FLY_API_TOKEN: optional("FLY_API_TOKEN", ""),
   FLY_APP_NAME: optional("FLY_APP_NAME", "tevy2-agents"),
   FLY_REGION: optional("FLY_REGION", "lhr"),
+
+  // Docker host (only needed if INFRA_PROVIDER=docker)
+  // Point to Docker Engine API — e.g. http://your-hetzner-ip:2375 or via SSH tunnel http://localhost:2375
+  DOCKER_HOST_URL: optional("DOCKER_HOST_URL", "http://localhost:2375"),
+  // Public URL for the Docker host (used to generate webchat URLs)
+  // e.g. https://bots.tevy2.ai or http://your-hetzner-ip
+  DOCKER_HOST_PUBLIC_URL: optional("DOCKER_HOST_PUBLIC_URL", "http://localhost"),
 
   // Agent
   ANTHROPIC_API_KEY: required("ANTHROPIC_API_KEY"),

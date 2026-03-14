@@ -1,8 +1,22 @@
 import { Hono } from "hono";
 import { supabase } from "../lib/supabase.js";
-import { createMachine, getMachine, startMachine, stopMachine, deleteMachine, updateMachine, deleteVolume, execInMachine } from "../lib/fly.js";
+import { createMachine, getMachine, startMachine, stopMachine, deleteMachine, updateMachine, deleteVolume, execInMachine } from "../lib/infra.js";
 import { authMiddleware } from "../middleware/auth.js";
 import { env } from "../env.js";
+
+// Generate webchat URL based on infra provider
+function getWebchatUrl(instance: { fly_machine_name?: string; host_port?: number } & Record<string, unknown>): string {
+  if (env.INFRA_PROVIDER === "fly") {
+    return `https://${instance.fly_machine_name}.fly.dev`;
+  }
+  // Docker host — use DOCKER_HOST_PUBLIC_URL + port
+  const publicHost = env.DOCKER_HOST_PUBLIC_URL || "http://localhost";
+  const port = instance.host_port;
+  if (port) {
+    return `${publicHost}:${port}`;
+  }
+  return `${publicHost}:19000`;
+}
 
 type AuthEnv = {
   Variables: {
@@ -152,7 +166,18 @@ instances.post("/", async (c) => {
     });
 
     // Generate webchat URL (the agent's OpenClaw gateway)
-    const webchatUrl = `https://${instanceName}.fly.dev`;
+    // Store host port for Docker provider
+    if ((machine as any).hostPort) {
+      await supabase
+        .from("instances")
+        .update({ host_port: (machine as any).hostPort })
+        .eq("id", instance.id);
+    }
+
+    const webchatUrl = getWebchatUrl({
+      fly_machine_name: instanceName,
+      host_port: (machine as any).hostPort,
+    });
 
     return c.json({
       success: true,
@@ -194,7 +219,7 @@ instances.get("/", async (c) => {
         return {
           ...inst,
           liveStatus: machine.state,
-          webchatUrl: `https://${inst.fly_machine_name}.fly.dev`,
+          webchatUrl: getWebchatUrl(inst),
         };
       } catch {
         return { ...inst, liveStatus: "unknown", webchatUrl: null };
@@ -224,7 +249,7 @@ instances.get("/:id", async (c) => {
     return c.json({
       ...data,
       liveStatus: machine.state,
-      webchatUrl: `https://${data.fly_machine_name}.fly.dev`,
+      webchatUrl: getWebchatUrl(data),
     });
   } catch {
     return c.json({ ...data, liveStatus: "unknown" });
@@ -431,7 +456,7 @@ instances.post("/:id/trigger", async (c) => {
   // For now, we use the gateway WebSocket to send a task directly.
 
   // Alternative: use the OpenClaw gateway API to send a session message
-  const gatewayUrl = `https://${data.fly_machine_name}.fly.dev`;
+  const gatewayUrl = getWebchatUrl(data);
   const gatewayToken = data.gateway_token;
 
   if (!gatewayToken) {
@@ -498,7 +523,7 @@ instances.get("/:id/files/*", async (c) => {
     return c.json({ error: "Instance not found" }, 404);
   }
 
-  const agentUrl = `https://${data.fly_machine_name}.fly.dev`;
+  const agentUrl = getWebchatUrl(data);
   try {
     const res = await fetch(`${agentUrl}/api/files/${filePath}`, {
       headers: { Authorization: `Bearer ${data.gateway_token}` },
@@ -546,7 +571,7 @@ instances.get("/:id/boot-status", async (c) => {
     }
 
     // Machine is "started" — read actual gateway logs to determine real boot stage
-    const webchatUrl = `https://${data.fly_machine_name}.fly.dev`;
+    const webchatUrl = getWebchatUrl(data);
     const createdAt = new Date(data.created_at).getTime();
     const uptimeMs = Date.now() - createdAt;
 
