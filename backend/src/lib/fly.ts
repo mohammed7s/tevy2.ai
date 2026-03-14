@@ -121,7 +121,7 @@ export async function createMachine(opts: {
       guest: {
         cpu_kind: "shared",
         cpus: 1,
-        memory_mb: 4096,
+        memory_mb: 2048,
       },
       auto_destroy: false,
       restart: { policy: "on-failure" },
@@ -213,7 +213,7 @@ export async function updateMachine(
         guest: {
           cpu_kind: "shared",
           cpus: 1,
-          memory_mb: 4096,
+          memory_mb: 2048,
         },
         auto_destroy: false,
         restart: { policy: "on-failure" },
