@@ -34,6 +34,7 @@ const NAV_ITEMS = [
 export default function DashboardPage() {
   const router = useRouter();
   const [hasInstance, setHasInstance] = useState(false);
+  const [liveStatus, setLiveStatus] = useState<string>("unknown"); // started | stopped | unknown | error
   const [activeTab, setActiveTab] = useState("home");
   const [userEmail, setUserEmail] = useState<string | null>(null);
   const [authChecked, setAuthChecked] = useState(false);
@@ -84,6 +85,7 @@ export default function DashboardPage() {
           };
           setInstanceData(data);
           setHasInstance(true);
+          setLiveStatus((inst.liveStatus as string) || "unknown");
           // Keep localStorage in sync
           localStorage.setItem("tevy_instance_id", data.id);
           localStorage.setItem("tevy_instance_name", data.name);
@@ -135,8 +137,19 @@ export default function DashboardPage() {
 
         <div className="px-5 py-4 border-b border-[var(--border)]">
           <div className="flex items-center gap-2 mb-1">
-            <div className={`w-2 h-2 rounded-full ${hasInstance ? "bg-green-500" : "bg-yellow-500 animate-pulse"}`}></div>
-            <span className="text-sm font-semibold">{hasInstance ? "Agent Online" : "Setup Required"}</span>
+            <div className={`w-2 h-2 rounded-full ${
+              !hasInstance ? "bg-yellow-500 animate-pulse" :
+              liveStatus === "started" ? "bg-green-500" :
+              liveStatus === "stopped" ? "bg-red-500" :
+              "bg-yellow-500 animate-pulse"
+            }`}></div>
+            <span className="text-sm font-semibold">{
+              !hasInstance ? "Setup Required" :
+              liveStatus === "started" ? "Agent Online" :
+              liveStatus === "stopped" ? "Agent Offline" :
+              liveStatus === "starting" ? "Starting..." :
+              "Checking..."
+            }</span>
           </div>
         </div>
 
@@ -530,22 +543,49 @@ function HomeTab({ instanceData }: { instanceData: { id: string; name: string; w
       {/* Dashboard content */}
       <div className="flex-1 overflow-auto p-8 max-w-4xl">
         <h1 className="text-2xl font-bold mb-1">Dashboard</h1>
-        <p className="text-[var(--muted)] mb-8">Your marketing agent is live and ready.</p>
+        <p className="text-[var(--muted)] mb-8">{
+          liveStatus === "started" ? "Your marketing agent is live and ready." :
+          liveStatus === "stopped" ? "Your agent is offline. Start it from Settings." :
+          "Checking agent status..."
+        }</p>
 
         {/* Status cards */}
         <div className="grid grid-cols-3 gap-4 mb-8">
           <div className="glass rounded-xl p-4">
             <div className="text-xs text-[var(--muted)] mb-1">Agent Status</div>
             <div className="flex items-center gap-2">
-              <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></div>
-              <span className="text-lg font-bold text-green-400">Online</span>
+              <div className={`w-2 h-2 rounded-full ${
+                liveStatus === "started" ? "bg-green-500 animate-pulse" :
+                liveStatus === "stopped" ? "bg-red-500" :
+                "bg-yellow-500 animate-pulse"
+              }`}></div>
+              <span className={`text-lg font-bold ${
+                liveStatus === "started" ? "text-green-400" :
+                liveStatus === "stopped" ? "text-red-400" :
+                "text-yellow-400"
+              }`}>{
+                liveStatus === "started" ? "Online" :
+                liveStatus === "stopped" ? "Offline" :
+                liveStatus === "starting" ? "Starting" :
+                "Checking..."
+              }</span>
             </div>
-            <div className="text-xs text-[var(--muted)] mt-1">Telegram connected</div>
+            <div className="text-xs text-[var(--muted)] mt-1">
+              {liveStatus === "started" ? "Agent is running" :
+               liveStatus === "stopped" ? "Start from Settings" :
+               "Fetching status..."}
+            </div>
           </div>
           <div className="glass rounded-xl p-4">
             <div className="text-xs text-[var(--muted)] mb-1">Chat Channel</div>
-            <div className="text-lg font-bold">Telegram</div>
-            <div className="text-xs text-[var(--muted)] mt-1">Receiving messages</div>
+            <div className="text-lg font-bold">
+              {instanceData?.config?.telegramBotToken ? "Telegram" : "Webchat"}
+            </div>
+            <div className="text-xs text-[var(--muted)] mt-1">
+              {liveStatus === "started"
+                ? (instanceData?.config?.telegramBotToken ? "Receiving messages" : "Ready for chat")
+                : "Waiting for agent"}
+            </div>
           </div>
           <div className="glass rounded-xl p-4">
             <div className="text-xs text-[var(--muted)] mb-1">Instance</div>
