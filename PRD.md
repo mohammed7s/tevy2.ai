@@ -1,8 +1,8 @@
 # tevy2.ai — Product Requirements Document
 
 > AI Marketing Concierge for SMEs
-> Status: In Development | Hackathon MVP
-> Last updated: 2026-03-04 23:00 UTC
+> Status: In Development
+> Last updated: 2026-03-15 23:30 UTC
 
 ---
 
@@ -20,597 +20,412 @@ tevy2.ai is an AI marketing concierge powered by OpenClaw. Each SME gets a dedic
 
 ## 3. Core Principles
 
-- **The bot is an employee, not a tool.** It has a role (marketing), reports to the admin, and acts like a human team member. The admin manages it like they'd manage a junior marketer.
+- **The bot is an employee, not a tool.** It has a role (marketing), reports to the admin, and acts like a human team member.
 - **Concierge, not dashboard-first.** The chat IS the product. The dashboard supports it.
-- **One instance per user.** Full isolation. Their data, their bot.
-- **Opinionated defaults.** Pre-configured tools, skills, and prompts. User doesn't touch OpenClaw internals.
+- **One VPS per user.** Full VM isolation. Their data, their server, their agent.
+- **OpenClaw is the framework.** We don't rebuild what OpenClaw already handles. We provide a curated image on top of it.
+- **VPS is the source of truth.** The backend just knows which VPS belongs to who. The agent manages its own state (skills, config, memory).
 - **Platform agnostic.** User chooses their chat channel (Telegram, WhatsApp, or embedded webchat).
 
-### Future Extension
-The admin can configure the bot to interact with other team members (e.g., a designer, another marketer) or even other bots. Think of it as hiring more employees. Out of scope for MVP.
-
 ---
 
-## 4. Architecture
+## 4. What the Product Actually Is
+
+A curated OpenClaw image + a way to deploy and update it.
 
 ```
-┌─────────────────────────────┐
-│     tevy2.ai Platform       │
-│  (Provisioning + Dashboard) │
-└──────────┬──────────────────┘
-           │ spins up per user
-           ▼
-┌─────────────────────────────┐
-│   OpenClaw Instance (per SME)│
-│                              │
-│  SOUL.md → Marketing persona │
-│  Memory  → Brand profile,    │
-│            competitors,       │
-│            content history    │
-│  Skills  → Social posting,   │
-│            web research,      │
-│            brand analysis     │
-│  Tools   → Tavily, Postiz,   │
-│            browser, web_fetch │
-│  Channel → TG / WA / Webchat │
-└─────────────────────────────┘
+YOUR PRODUCT = Git repo with:
+├── Custom SOUL.md (marketing concierge personality)
+├── Custom AGENTS.md (agent behavior rules)
+├── Custom memory structure (brand-profile.md, competitors.md, etc.)
+├── Pre-installed custom skills (brand-analyzer, social-drafter, etc.)
+├── Shared API keys (Tavily, Brave, etc.)
+└── Scripts to provision, update, and backup
 ```
 
-### Shared Resources (Master Accounts)
-Each instance uses shared API keys managed by tevy2.ai platform:
-- **Tavily** — web search / market research
-- **Postiz** — social media scheduling & posting
-- **LLM provider** — Anthropic/OpenAI (metered per user)
-
-### Per-User Resources
-- OpenClaw instance (containerized)
-- Chat channel connection (user provides their TG bot token or WA number)
-- Social account OAuth tokens (stored per instance)
-- Brand memory files
+Deployed on a per-customer Hetzner VPS. Updated via git push + SSH.
 
 ---
 
-## 5. User Journey
-
-### 5.1 Onboarding (Dashboard)
-
-1. User signs up at tevy2.ai
-2. **Brand Setup:**
-   - Paste website URL
-   - Paste social media profile links (IG, TikTok, LinkedIn, X, FB)
-   - Optionally upload brand guidelines (PDF/doc/images)
-3. **Connect Platforms:**
-   - OAuth connect to social accounts they want to post to
-   - OR use pre-installed demo accounts for testing
-4. **Choose Chat Channel:**
-   - Telegram (provide bot token or we provision one)
-   - WhatsApp
-   - Embedded webchat on dashboard (always available)
-5. **Agent activates:**
-   - Scrapes website + social profiles
-   - Generates Brand Profile (vibe, audience, value prop, tone)
-   - Sends first message via chat: "Hey! I've analyzed your brand. Here's what I found: [summary]. Does this feel right?"
-
-### 5.2 Day-to-Day (Chat — Concierge Mode)
-
-User talks to the bot naturally:
+## 5. Architecture
 
 ```
-User: "We're launching a new product next week, help me with posts"
-Bot:  [Asks a few questions about the product]
-Bot:  [Drafts platform-specific posts: IG carousel, TikTok script, LinkedIn text]
-Bot:  "Here are 3 options. Want me to schedule them?"
-
-User: "What are competitors doing?"
-Bot:  [Pulls recent competitor posts, summarizes trends]
-Bot:  "Competitor X is pushing sustainability hard. Want me to draft something in that angle?"
-
-User: "Schedule option 2 for Tuesday 9am"
-Bot:  "Done ✅ Scheduled for Tue 9am on IG and LinkedIn."
-
-User: "How did last week do?"
-Bot:  [Pulls analytics] "Your IG reel got 2.3K views, 45% above your average..."
+┌──────────────┐     ┌────────────────────────┐     ┌────────────────┐
+│   Netlify    │     │   Railway (Platform)   │     │ Hetzner Cloud  │
+│  Dashboard   │────▶│                        │────▶│                │
+│  Next.js     │     │  2 DB tables:          │     │  VPS per user  │
+│  Static      │     │  - accounts            │     │                │
+│  Free        │     │  - agents              │     │  Each VPS:     │
+│              │     │                        │     │  - OpenClaw    │
+│              │     │  Thin API:             │     │  - Your skills │
+│              │     │  - Hetzner proxy       │     │  - Their data  │
+│              │     │  - Auth (Stytch)       │     │                │
+│              │     │  - Billing (Stripe)    │     │  Updated via   │
+│              │     │                        │     │  git push + SSH│
+└──────────────┘     └────────────────────────┘     └────────────────┘
 ```
 
-### 5.3 Dashboard (Support & Visibility)
+### Why 1:1 VPS
 
-The dashboard provides:
-- Overview of brand profile
-- Content calendar (view + edit scheduled posts)
-- Connected accounts status
-- Analytics / performance
-- Market research reports
-- Embedded webchat widget (always available)
+- **Simplicity**: No container orchestration, no bin-packing, no tracking which container is on which host
+- **Security**: Full VM isolation (own kernel). One customer compromised ≠ all customers compromised
+- **OpenClaw native**: It's just a normal OpenClaw install. No container quirks.
+- **Portability**: tar the home directory → scp to new VPS → done
+- **Customer gets**: 2 vCPU, 4GB RAM, 40GB SSD — a real machine
 
----
+### Server Spec
 
-## 6. Features
+**Hetzner CX23** (x86 Intel/AMD): 2 vCPU, 4GB RAM, 40GB NVMe, 20TB traffic, ~€4.49/mo
 
-### 6.1 Brand Analysis (Pillar 1)
-- **Input:** Website URL, social links, uploaded brand guidelines
-- **Process:** Scrape + analyze → extract vibe, audience, value prop, tone of voice, visual style
-- **Output:** `brand-profile.md` stored in agent memory
-- **Editable:** User can refine via chat ("Actually our target is more 30-45 age range") or dashboard
-- **Updates:** Agent re-analyzes periodically or on request
+### Networking
 
-### 6.2 Social Media Drafting & Posting (Pillar 2)
-- **Drafting:** Agent proposes posts based on brand profile, trends, and user requests
-- **Multi-platform adaptation:** Same content adapted per platform (IG visual, TikTok video script, LinkedIn professional, X concise)
-- **Approval flow:** Draft → send to user via chat → user approves/edits → schedule/publish
-- **Content calendar:** Visual calendar on dashboard, agent manages scheduling
-- **Posting mechanism:** Postiz (self-hosted, multi-platform support)
-- **Supported platforms (MVP):** Instagram, TikTok, LinkedIn, X
-- **Future:** Facebook, YouTube, Pinterest
-
-### 6.3 SEO (Pillar 3)
-- **Site audit:** Agent crawls user's website and checks technical SEO (meta tags, headings, OG tags, sitemap, robots.txt, broken links, page speed, mobile-friendliness)
-- **Keyword research:** Discovers target keywords in user's niche, analyzes what competitors rank for, identifies content gaps
-- **Content optimization:** Reviews blog posts / landing pages before publishing — recommends title tags, meta descriptions, heading structure, semantic keywords, internal linking
-- **Ongoing monitoring:** Periodic re-crawls to catch regressions (new broken links, missing meta tags, etc.)
-- **Output:** SEO audit report delivered via chat + stored in memory/seo/. Actionable recommendations prioritized by impact.
-- **Tools:** Tavily (search + extract), web_fetch, browser (for JS-rendered pages)
-- **Framework:**
-  1. Initial audit on onboarding (after brand analysis)
-  2. Keyword research based on brand niche + competitors
-  3. Content optimization on request ("review this blog post for SEO")
-  4. Weekly/monthly re-audit with delta report ("3 new issues since last check")
-
-### 6.4 Market Research (Pillar 4)
-- **Competitor tracking:** Monitor competitor social accounts (posts, engagement, themes)
-- **Industry trends:** Web search for trending topics in user's niche
-- **Audience insights:** Scrape reviews, forums, Reddit for pain points and language
-- **Output:** Weekly research digest delivered via chat + viewable on dashboard
-- **Framework:**
-  1. Identify 3-5 competitors (user provides or agent discovers)
-  2. Track their social posting cadence, themes, engagement
-  3. Search for industry keywords weekly
-  4. Summarize: "Here's what's happening in your space this week"
+- **DNS**: Wildcard `*.agents.tevy2.ai` → Hetzner Load Balancer IP
+- **TLS**: Hetzner Load Balancer (€5.49/mo, handles all TLS)
+- **Firewall**: Hetzner Cloud Firewall (free, API-managed)
+  - SSH (22): Only from backend IP
+  - Gateway (18789): Only from Load Balancer IP
 
 ---
 
-## 7. Dashboard Pages
-
-| Page | Purpose |
-|------|---------|
-| **Home** | Overview: brand summary, upcoming posts, quick stats, recent research |
-| **Brand** | Brand profile (editable), audience persona, voice guidelines |
-| **Calendar** | Content calendar — view, edit, reschedule posts |
-| **Connect** | Link social accounts (OAuth), manage chat channel, API status |
-| **Analytics** | Post performance across platforms, trends over time |
-| **Research** | Market research reports, competitor tracking, trend alerts |
-| **Chat** | Embedded webchat widget — always-on fallback channel |
-
----
-
-## 8. OpenClaw Preconfiguration (Per Instance)
-
-### SOUL.md
-- Persona: Friendly, knowledgeable marketing consultant
-- Tone: Simple language, no jargon, actionable advice
-- Role: "You are [Brand Name]'s dedicated marketing assistant"
-- Boundaries: Only acts on marketing tasks, doesn't make financial decisions
-
-### AGENTS.md
-- On startup: Read brand-profile.md, check content calendar
-- Proactive: Suggest posts based on calendar gaps, trending topics
-- Approval required: Never post without explicit user approval
-- Memory: Update brand profile as user provides new info
-
-### Memory Structure
-```
-memory/
-├── brand-profile.md      # Brand vibe, audience, value prop, tone
-├── competitors.md        # Tracked competitors + notes
-├── content-calendar.md   # Scheduled and past posts
-├── seo/
-│   ├── audit.md          # Latest site audit results
-│   ├── keywords.md       # Target keywords + opportunities
-│   └── YYYY-MM-DD.md     # Periodic re-audit deltas
-├── research/
-│   └── YYYY-MM-DD.md     # Research digests
-└── conversations/
-    └── key-decisions.md   # Important user preferences
-```
-
-### Pre-installed Tools
-| Tool | Purpose | Account Type |
-|------|---------|-------------|
-| Tavily | Web search, market research | Master (shared) |
-| Postiz | Social posting & scheduling | Master or per-user |
-| web_fetch | Scrape websites, competitor pages | Built-in |
-| Browser | Deep research, social scraping | Built-in |
-| Image gen | Social media creatives | Master (shared) |
-
-### Channel Config
-- Telegram primary (user provides bot token during onboarding)
-- WhatsApp, Discord, Slack — coming soon
-- **Security: Telegram bots are locked to the owner only** — `dmPolicy: "allowlist"` with `allowFrom` set to the user's Telegram ID (collected during onboarding). No one else can message their bot. This prevents abuse and ensures billing accuracy.
-
----
-
-## 9. Tech Stack
-
-| Component | Technology | Status |
-|-----------|-----------|--------|
-| Frontend | Next.js 16 + Tailwind | ✅ Built |
-| Auth | Stytch (magic link) | 🔲 Wiring up |
-| Backend/DB | Next.js API routes + TBD | 🔲 |
-| AI Engine | OpenClaw (one container per user) | ✅ Configs ready |
-| Social Posting | Postiz (master account, cloud) | 🔲 Need account |
-| Web Search | Tavily API | ✅ Key available |
-| LLM | Claude (model TBD) | 🔲 |
-| Hosting (app) | Fly.io (Next.js app) | ✅ Decided |
-| Hosting (instances) | Fly.io Machines (1 per user, lazy-start) | ✅ Decided |
-| Database + Auth | Supabase (free tier) | ✅ Decided |
-| Chat | OpenClaw webchat embed | 🔲 |
-| Tunnel (dev) | localtunnel | ✅ Running |
-
----
-
-## 10. MVP Scope (Hackathon — 1 Day, Solo)
-
-### The Demo Story
-"Paste your website URL, and in 60 seconds you have a marketing person who knows your brand."
-
-### Must Have
-- [ ] Onboarding form (simple web page or script) → generates USER.md → triggers brand analysis
-- [ ] Brand analysis: agent scrapes website + social profiles → generates brand-profile.md → introduces itself via chat
-- [ ] Chat concierge via OpenClaw webchat (embedded on a page or standalone)
-- [ ] Social post drafting with approval flow (draft → present options → user approves/edits)
-- [ ] Basic competitor research (user provides names → agent scrapes → summarizes)
-- [ ] Pre-configured OpenClaw instance with SOUL.md, AGENTS.md, USER.md, memory templates
-- [ ] Content calendar tracking in memory (markdown-based, not UI)
-
-### Nice to Have (if time)
-- [ ] Telegram bot as alternative channel
-- [ ] Actual posting via Postiz API
-- [ ] Simple landing page for tevy2.ai
-- [ ] Multi-platform post adaptation (same content → IG/LinkedIn/X variants)
-
-### Out of Scope
-- [ ] Dashboard UI
-- [ ] OAuth social account connections
-- [ ] Analytics
-- [ ] Multi-user provisioning / billing
-- [ ] Image/video generation
-- [ ] Ad campaigns, CRM
-
----
-
-## 11. Skills Architecture
-
-### Where Skills Live
-Each tevy2.ai instance ships with pre-configured skills in `<workspace>/skills/`. This is the highest-precedence location — per-agent, isolated.
+## 6. Two Layers on Each VPS
 
 ```
-workspace/
-├── skills/
-│   ├── brand-analyzer/SKILL.md     # Scrape + analyze brand from URL
-│   ├── social-drafter/SKILL.md     # Draft platform-specific posts
-│   ├── competitor-tracker/SKILL.md # Monitor competitor social activity
-│   ├── market-research/SKILL.md    # Industry trends + audience insights
-│   └── postiz/SKILL.md            # Schedule/publish via Postiz API (Phase 2)
-├── SOUL.md
-├── AGENTS.md
-├── USER.md
-└── memory/
+/opt/tevy/  ← YOUR STUFF (updatable via git pull, shared across all customers)
+├── version.txt
+├── openclaw-version.txt
+├── soul.md                    ← template (copied to workspace on first boot)
+├── agents.md                  ← template (copied to workspace on first boot)
+├── memory-template/           ← initial memory structure
+│   ├── brand-profile.md
+│   ├── competitors.md
+│   └── content-calendar.md
+├── skills/                    ← your custom skills (symlinked into workspace)
+│   ├── brand-analyzer/SKILL.md
+│   ├── social-drafter/SKILL.md
+│   ├── seo-auditor/SKILL.md
+│   ├── competitor-tracker/SKILL.md
+│   ├── market-research/SKILL.md
+│   ├── keyword-researcher/SKILL.md
+│   └── content-seo/SKILL.md
+├── shared-keys.env            ← Layer 2 API keys (Tavily, Brave, etc.)
+├── provision.sh               ← first-time setup (run once)
+└── update.sh                  ← update existing VPS (run many times)
+
+/home/agent/.openclaw/  ← CUSTOMER'S STUFF (never touched by updates)
+├── openclaw.json               ← their API keys, config
+├── workspace/
+│   ├── SOUL.md                 ← their copy (may have customized)
+│   ├── AGENTS.md               ← their copy
+│   ├── USER.md                 ← their profile
+│   ├── MEMORY.md               ← their long-term memory
+│   ├── memory/                 ← their daily notes, research, etc.
+│   └── skills/ → /opt/tevy/skills  ← SYMLINK (updated via git pull)
+├── agents/                     ← session data
+└── settings/
 ```
 
-### Skills We Ship
+**Skills are symlinked.** When you git push a skill update, all customers get it immediately on next gateway restart.
 
-**seo-auditor**
-- Input: Website URL from brand-profile.md
-- Tools: web_fetch, web_search (Tavily), browser
-- Output: Writes memory/seo/audit.md + prioritized fix list via chat
-- Does: Crawls site, checks meta tags, headings, OG tags, sitemap, robots.txt, broken links, page speed signals, mobile-friendliness, internal linking structure
-
-**keyword-researcher**
-- Input: Industry/niche + competitors from brand-profile.md
-- Tools: web_search (Tavily), web_fetch
-- Output: Writes memory/seo/keywords.md
-- Does: Discovers target keywords, analyzes competitor ranking pages, identifies content gaps, groups by search intent
-
-**content-seo**
-- Input: Draft content + target keyword
-- Tools: web_search (Tavily), web_fetch
-- Output: Optimized content + meta tag recommendations via chat
-- Does: Analyzes top-ranking pages, recommends title/meta/headings/semantic keywords/internal links
-
-**brand-analyzer**
-- Input: Website URL, social profile links
-- Tools: web_fetch, browser
-- Output: Writes memory/brand-profile.md
-- Does: Scrapes site, extracts vibe/audience/value prop/tone, analyzes existing social posts
-
-**social-drafter**
-- Input: Topic/request + brand-profile.md context
-- Tools: none (pure LLM generation)
-- Output: 2-3 post drafts per platform
-- Does: Adapts content per platform (IG caption, LinkedIn article, X thread, TikTok script)
-
-**competitor-tracker**
-- Input: Competitor names/URLs from competitors.md
-- Tools: web_fetch, web_search (Tavily)
-- Output: Updates memory/competitors.md + research digest
-- Does: Scrapes competitor social accounts, identifies themes/cadence/engagement
-
-**market-research**
-- Input: Industry keywords from brand-profile.md
-- Tools: web_search (Tavily), web_fetch
-- Output: Writes memory/research/YYYY-MM-DD.md
-- Does: Searches for trending topics, audience pain points, industry news
-
-**seo-auditor**
-- Input: Website URL from brand-profile.md
-- Tools: web_fetch, web_search (Tavily), browser
-- Output: Writes memory/seo-audit.md + actionable recommendations via chat
-- Does: Crawls site pages, checks meta titles/descriptions, heading structure, Open Graph tags, canonical URLs, robots.txt, sitemap.xml, page speed indicators, mobile-friendliness, internal linking, broken links. Generates prioritized fix list.
-
-**keyword-researcher**
-- Input: Industry/niche + competitors from brand-profile.md
-- Tools: web_search (Tavily), web_fetch
-- Output: Writes memory/seo/keywords.md
-- Does: Discovers high-intent keywords in the user's niche, analyzes competitor ranking pages, identifies content gaps and opportunities, suggests target keywords grouped by intent (informational, commercial, transactional).
-
-**content-seo**
-- Input: Draft blog post/page + target keyword
-- Tools: web_search (Tavily), web_fetch
-- Output: SEO-optimized content + recommendations via chat
-- Does: Analyzes top-ranking pages for target keyword, recommends title tags, meta descriptions, heading structure, internal links, content length, and semantic keywords to include. Can review existing pages or optimize new drafts before publishing.
-
-### Phase 2 Skills
-
-**postiz** — Publish posts via Postiz API
-**content-calendar-ui** — Sync calendar with external tools
-**analytics** — Pull performance data from social platforms
-**image-gen** — Generate social media creatives
-**concierge-onboarding** — Guided setup bot (Option A architecture)
-
-### Skill Management
-- Skills are version-pinned per deployment
-- Updates go through tevy2.ai platform, not individual instances
-- ClawHub used for distribution if we open-source them later
+**SOUL.md / AGENTS.md** are copied once at first boot. After that, the customer's copy lives independently. Template updates only affect new customers.
 
 ---
 
-## 12. Phases
+## 7. Three API Key Types
 
-### Phase 1 — Hackathon (NOW)
-**Goal:** Production-level, ready to charge money.
-- ✅ Landing page (hero, features, pricing, CTA)
-- ✅ 4-step onboarding wizard (business info → socials → preferences → launch)
-- ✅ Login page (magic link via Stytch)
-- ✅ Launch API generates USER.md + brand-profile.md + competitors.md
-- 🔲 Stytch auth wiring
-- 🔲 Instance provisioning (deploy OpenClaw per user)
-- 🔲 Postiz integration (master account, schedule + publish)
-- 🔲 OpenClaw webchat embed in /chat
-- 🔲 Stripe billing ($29/$79 tiers)
-- Option C architecture (form → deploy → Tevy boots with data)
+### Layer 1: Platform (never on VPS)
+Stytch, Stripe, Supabase, Hetzner API token → Railway env vars only.
 
-### Phase 2 — Post-Hackathon
-- Option A concierge bot for guided onboarding via chat
-- Dashboard (brand overview, content calendar, analytics)
-- OAuth social account connections (user connects IG/TT/LI/X directly)
-- Telegram/WhatsApp channel options
-- Image/video generation for posts
-- Advanced analytics + reporting
+### Layer 2: Shared Services (we pay, baked into image repo)
+Tavily, Brave, Anthropic/OpenAI, AgentMail → in `/opt/tevy/shared-keys.env`, loaded by OpenClaw via environment. Updated via git push.
+
+### Layer 3: Customer (injected at boot, their responsibility)
+Telegram bot token, HubSpot, GitHub, Gmail → in `openclaw.json`, written by cloud-init at VPS creation.
 
 ---
 
-## 13. Decisions Made
-- **Architecture:** Option C (form → deploy instance → Tevy boots with data). Option A concierge bot in Phase 2.
-- **Postiz:** Master account (shared). User connects socials through our Postiz. No per-user Postiz instances.
-- **Auth:** Stytch magic links (used before on Clawster)
-- **Skills location:** `<workspace>/skills/` per instance (highest precedence)
-- **Team:** Solo (Mohammed) + McClowin
-- **Domain:** tevy2.ai (registered)
-- **Pricing:** $29/mo Starter, $79/mo Pro
+## 8. Flows
 
-## 14. Open Questions
-1. **Hosting:** VPS (Docker) vs HuggingFace Spaces vs Fly.io? — deciding
-2. **Postiz account:** Need to create master account + API key
-3. **LLM model:** Sonnet (cheaper) vs Opus (smarter) for Tevy instances?
-4. **Stripe:** Need account + product/price IDs
-5. **Demo business:** Which real/fake business to test with?
+### New Customer (60 seconds)
 
-## 15. TODO — Dashboard & Agent Improvements
+```
+1. Customer signs up on dashboard
+2. Backend: hcloud server create --image <base-snapshot> --user-data <cloud-init>
+3. cloud-init writes openclaw.json (customer's keys) + runs provision.sh
+4. provision.sh: clones Git repo → copies templates → symlinks skills → starts gateway
+5. Backend: adds VPS to load balancer
+6. Agent is live at customer-slug.agents.tevy2.ai
+```
 
-- [ ] **Tavily built-in:** Pre-configure Tavily API key in every agent instance for web search / browser access. Should be a master key injected via env vars at provisioning time (not user-provided).
-- [ ] **Show username on dashboard:** Display the logged-in user's name/email somewhere visible on the dashboard (sidebar, header, or account dropdown).
+### Update All Customers (git push → done)
 
-## 16. Data Archival & Recovery
+```
+1. You edit skills, SOUL.md template, shared keys, or bump OpenClaw version
+2. git push to tevy-agent-image repo
+3. GitHub Action SSHs into each VPS and runs update.sh
+4. update.sh: git pull → update OpenClaw if needed → restart gateway
+5. Customer data untouched. Skills updated via symlink. Done.
+```
 
-### Problem
-When a Fly machine is destroyed (user deletes instance, billing lapse, Fly outage), the persistent volume is deleted too. The user's brand profile, research, content calendar, and conversation history are lost.
+update.sh:
+```bash
+#!/bin/bash
+cd /opt/tevy && git pull origin main
+WANTED=$(cat openclaw-version.txt)
+CURRENT=$(openclaw --version 2>/dev/null || echo "none")
+[ "$CURRENT" != "$WANTED" ] && npm install -g openclaw@$WANTED
+cp shared-keys.env /etc/tevy/shared-keys.env
+systemctl restart openclaw-gateway
+```
 
-### Solution: Periodic Archive to Supabase Storage
+### Migrate Customer (5 commands)
 
-**How it works:**
-1. Each agent instance has a cron job (or heartbeat task) that periodically archives its `memory/` directory
-2. Archive is a tarball uploaded to Supabase Storage (S3-compatible, included in free tier)
-3. Backend stores archive metadata in `instance_archives` table
-4. On instance recreation, the entrypoint checks for an existing archive and restores from it
+```
+1. ssh old-vps "tar czf /tmp/backup.tar.gz -C /home/agent .openclaw/"
+2. scp old-vps:/tmp/backup.tar.gz new-vps:/tmp/
+3. ssh new-vps "tar xzf /tmp/backup.tar.gz -C /home/agent/"
+4. ssh new-vps "systemctl restart openclaw-gateway"
+5. Update load balancer target
+```
 
-**Archive frequency:** Every 6 hours + on graceful shutdown
+### Dashboard Actions (all via SSH to VPS)
 
-**What gets archived:**
-- `memory/` (brand profile, competitors, calendar, research, SEO, conversations)
-- `SOUL.md`, `USER.md`, `AGENTS.md` (in case agent customized them)
+| Action | What happens |
+|--------|-------------|
+| Create agent | hcloud server create + cloud-init |
+| Stop agent | hcloud server poweroff |
+| Start agent | hcloud server poweron |
+| Delete agent | backup + hcloud server delete |
+| Install skill | ssh: clawhub install X |
+| Change personality | ssh: write to SOUL.md + restart |
+| Update API key | ssh: edit openclaw.json + restart |
+| View logs | ssh: tail logs |
+| Backup | ssh: tar + upload |
 
-**What does NOT get archived:**
-- OpenClaw sessions/chat history (ephemeral by design)
-- Credentials, API keys, tokens
+---
 
-**Recovery flow:**
-1. User creates new instance (or admin restores)
-2. Backend checks `instance_archives` for latest archive matching user_id
-3. If found: passes `ARCHIVE_URL` env var to the machine
-4. Entrypoint downloads + extracts archive before starting gateway
-5. Agent wakes up with all its memory intact
+## 9. Hetzner Snapshot (the base image)
 
-**Schema:**
+The snapshot is just **Ubuntu + Node.js + OpenClaw**. That's it. All Tevy-specific stuff comes from the Git repo at provision time.
+
+### How to build it (one-time, ~5 minutes):
+
+```bash
+hcloud server create --name temp --type cx23 --image ubuntu-24.04
+ssh root@<ip>
+  apt update && apt install -y nodejs npm git curl jq
+  npm install -g openclaw
+  # create agent user, systemd service, etc.
+  exit
+hcloud server create-image temp --description "tevy-base-v1"
+hcloud server delete temp
+```
+
+### When to rebuild:
+- Ubuntu major version → rebuild (~2x/year)
+- Node.js major version → rebuild (~1x/year)
+- Everything else → git push + update.sh (no rebuild needed)
+
+**The snapshot is dumber than a Docker image.** No Dockerfile, no layer caching, no registry. Just "Ubuntu with Node.js" frozen in time.
+
+---
+
+## 10. Database (minimal)
+
+Two tables in Supabase. That's it.
+
 ```sql
-CREATE TABLE instance_archives (
+CREATE TABLE accounts (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id UUID NOT NULL,
-  instance_id UUID NOT NULL,
-  archive_url TEXT NOT NULL,         -- Supabase Storage path
-  archive_size_bytes BIGINT,
-  file_count INT,
+  email TEXT UNIQUE NOT NULL,
+  stytch_user_id TEXT,
+  stripe_customer_id TEXT,
+  plan TEXT DEFAULT 'starter',
   created_at TIMESTAMPTZ DEFAULT now()
+);
+
+CREATE TABLE agents (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  account_id UUID REFERENCES accounts(id),
+  slug TEXT NOT NULL,
+  hetzner_server_id TEXT,
+  hetzner_ip TEXT,
+  state TEXT DEFAULT 'provisioning',
+  created_at TIMESTAMPTZ DEFAULT now(),
+  UNIQUE(account_id, slug)
 );
 ```
 
-**Implementation options:**
-- **Option A (agent-side):** Add a skill or cron that runs `tar + curl` to upload to Supabase Storage. Simple but requires storage credentials in the agent.
-- **Option B (backend-side):** Backend periodically reads files via gateway proxy (`/api/instances/:id/files/`) and creates the archive server-side. No credentials in agent but slower.
-- **Recommended:** Option A for speed + simplicity. Storage credentials are scoped (write-only to user's bucket prefix).
+No skills table — OpenClaw tracks skills on disk.
+No keys table — openclaw.json on VPS.
+No templates table — cloud-init scripts in codebase.
+No usage table — Stripe handles billing.
 
 ---
 
-## 17. Security Hardening (Production)
+## 11. Platform Backend (~50 lines of real logic)
 
-### Current State (MVP)
-- Agent gateway exposed publicly at `https://{name}.fly.dev`
-- Auth: 32-char random hex token over HTTPS (standard OpenClaw auth)
-- Token stored in Supabase `instances.gateway_token` column
-- Acceptable for MVP — same security model as any OpenClaw deployment
+```typescript
+app.post("/v1/agents", auth, async (c) => {
+  const server = await hetzner.createServer({ ... });
+  await db.insert("agents", { account_id, slug, server_id, ip });
+  return c.json({ id, slug, ip, status: "provisioning" });
+});
 
-### Production Hardening
+app.get("/v1/agents", auth, async (c) => {
+  return c.json(await db.query("SELECT * FROM agents WHERE account_id = $1", [id]));
+});
 
-**Phase 1: Fly Private Networking (deploy backend to Fly)**
-- Remove public `services` mapping from machine config (no more fly.dev URL for agents)
-- Backend communicates with agents over Fly internal network (`{name}.internal:18789`)
-- Gateway token still used for auth, but zero public attack surface
-- Only the backend can reach agents — users interact via dashboard or Telegram only
+app.delete("/v1/agents/:id", auth, async (c) => {
+  await ssh(agent.ip, "bash /home/agent/backup.sh");
+  await hetzner.deleteServer(agent.server_id);
+  await db.delete("agents", id);
+  return c.json({ ok: true });
+});
 
-**Phase 2: Token Rotation**
-- Gateway tokens rotated on every machine restart (backend updates Supabase)
-- Stale tokens auto-invalidated
-- Optional: short-lived tokens via HMAC (backend signs a time-limited token per request)
+app.post("/v1/agents/:id/actions/:action", auth, async (c) => {
+  switch (action) {
+    case "start":  await hetzner.poweron(server_id); break;
+    case "stop":   await hetzner.poweroff(server_id); break;
+    case "backup": await ssh(ip, "bash /home/agent/backup.sh"); break;
+  }
+});
 
-**Phase 3: Tailscale (if backend moves off Fly)**
-- Each Fly machine joins Tailnet via sidecar
-- Backend connects over Tailscale mesh — encrypted, identity-verified, no public exposure
-- ACL policies restrict which machines can talk to each other
-
-**Phase 4: Per-User Encryption**
-- Agent memory files encrypted at rest with user-specific key
-- Key derived from user auth, never stored alongside data
-- Even if Fly volume is compromised, data is unreadable
-
-### Network Architecture (Production Target)
-
-```
-User Browser ──HTTPS──▶ Dashboard (Fly)
-                              │
-                         Fly Private Network
-                              │
-                              ▼
-                        Backend (Fly)
-                         │         │
-                    ┌────┘         └────┐
-                    ▼                   ▼
-              Agent Machine 1     Agent Machine 2
-              (no public IP)      (no public IP)
+app.post("/v1/agents/:id/ssh", auth, async (c) => {
+  const result = await ssh(agent.ip, body.command);
+  return c.json({ output: result });
+});
 ```
 
-### Telegram Channel Security
-- Already secure: Telegram bot token is per-instance, stored as Fly secret
-- `dmPolicy: "allowlist"` restricts who can message each bot (TODO: implement per-user lockdown)
-- Bot token never exposed to the user's browser
+Dual auth (Stytch sessions for dashboard, API keys for devs) can be added later with one middleware change. Same routes, same logic.
 
 ---
 
-## 18. Multi-Agent Support
+## 12. Skills
 
-### Current State (MVP)
-- 1 agent per user (enforced in `POST /api/instances` — checks for existing instance)
-- Single marketing agent with fixed SOUL.md
+### Shipped in image repo (free for all customers)
 
-### Future: Multiple Agents Per User
+| Skill | Purpose |
+|-------|---------|
+| brand-analyzer | Scrape website + socials → generate brand profile |
+| social-drafter | Draft platform-specific posts from brand context |
+| competitor-tracker | Monitor competitor social activity |
+| market-research | Industry trends + audience insights |
+| seo-auditor | Technical SEO audit |
+| keyword-researcher | Discover target keywords |
+| content-seo | Optimize content for SEO |
 
-**Why:**
-- User wants separate agents for different brands/businesses
-- User wants specialized agents (one for social, one for SEO, one for research)
-- Agency use case: manage multiple client brands from one account
+### Updated via git push
+Skills live in the Git repo → symlinked into each customer's workspace. Update the repo, all customers get the new version on next restart.
 
-**Architecture:**
-- Remove the 1-per-user check in instance creation
-- `GET /api/instances` already returns a list — frontend needs an agent switcher
-- Dashboard sidebar shows active agent with a dropdown to switch
-- Each agent has its own Fly machine, volume, memory, and channel config
-- Billing per agent (e.g. $29/agent/month)
-
-**Plan tiers:**
-| Plan | Agents | Price |
-|------|--------|-------|
-| Starter | 1 | $29/mo |
-| Pro | 3 | $79/mo |
-| Agency | 10 | $199/mo |
-| Enterprise | Unlimited | Custom |
-
-**UI Changes:**
-- Agent switcher in sidebar (dropdown or list)
-- "New Agent" button in settings
-- Each agent can have a custom name and avatar
-- Settings tab shows all agents with start/stop/delete controls
-
-**Backend Changes:**
-- Remove `existing.length > 0` check in POST /api/instances
-- Add plan-based agent limit enforcement
-- Add `agent_name` and `agent_avatar` columns to instances table
+### Future: premium skills
+Can gate skills by checking plan tier in AGENTS.md or via a simple check script. No database needed — the plan info can be written to a file on the VPS at provisioning time.
 
 ---
 
-## 19. X.com (Twitter) Integration
+## 13. Storage
 
-### Goal
-Tevy can draft, schedule, and post to X.com on behalf of the user's business.
-
-### Architecture Options
-
-**Option A: X API v2 (Official — Recommended)**
-- Requires a corporate/business X Developer account
-- **Free tier:** Write-only, 1 app, 1,500 posts/month — enough for MVP
-- **Basic tier ($200/mo):** Read + write, 50K posts/month, 10K reads
-- Endpoint: `POST /2/tweets` for posting, `GET /2/users/:id/tweets` for reading
-- OAuth 2.0 PKCE for per-user auth (user connects their X account)
-- **Setup:** Apply at developer.x.com → create Project + App → get API keys
-- Master app owned by Brain&Bot / tevy2.ai, users OAuth connect
-
-**Option B: Postiz (Aggregator)**
-- Postiz supports X posting via their scheduler
-- Pro: Single integration covers multiple platforms
-- Con: Extra dependency, less control, Postiz needs its own X API keys anyway
-
-### Recommended Flow
-1. **tevy2.ai registers as X Developer** (corporate account under Brain&Bot)
-2. Get OAuth 2.0 Client ID + Client Secret
-3. User clicks "Connect X" on Connect tab → OAuth flow → we store their access token
-4. Tevy drafts posts → user approves → Tevy posts via X API v2
-5. For reading/analytics: pull user's recent tweets + metrics
-
-### API Keys Needed
-- X API Key (Consumer Key)
-- X API Key Secret (Consumer Secret)
-- OAuth 2.0 Client ID
-- OAuth 2.0 Client Secret
-- Per-user: OAuth access token + refresh token (stored in Supabase per instance)
-
-### Implementation
-- Backend: `POST /api/instances/:id/x/connect` — initiates OAuth flow
-- Backend: `GET /api/instances/:id/x/callback` — handles OAuth callback, stores tokens
-- Skill: `x-poster/SKILL.md` — posts to X via API, handles thread creation, media upload
-- Agent env: X access token injected per instance (from Supabase)
-
-### Considerations
-- Free tier has 1,500 posts/month limit — fine for MVP (most SMEs post 3-5x/week = ~20/mo)
-- Rate limits: 200 posts/15 min per user, 300 posts/15 min per app
-- Media upload: separate endpoint, max 5MB images, 512MB video
-- Threads: post first tweet, reply to it with each subsequent tweet
+- **Default**: 40GB NVMe (included with CX23)
+- **Expansion**: Hetzner Volumes (€4.59/100GB), attachable via API
+- **Backups**: tar + upload to Supabase Storage (cron on VPS)
 
 ---
 
-*Created: 2026-03-04 | Last updated: 2026-03-12*
+## 14. Pricing
+
+| | Starter | Pro | Business |
+|---|---------|-----|----------|
+| **Price** | €9.99/mo | €14.99/mo | €29.99/mo |
+| **Resources** | 2 vCPU, 4GB, 40GB | 2 vCPU, 4GB, 100GB | 2 vCPU, 4GB, 256GB |
+| **LLM** | Included (limited) | Included (higher) | BYOK |
+| **Skills** | All shipped skills | All + future pro | All + custom upload |
+| **Channels** | Webchat + 1 | Webchat + 3 | Unlimited |
+
+### Unit Economics
+
+| | Starter | Pro | Business |
+|---|---------|-----|----------|
+| Revenue | €9.99 | €14.99 | €29.99 |
+| VPS (CX23) | €4.49 | €4.49 | €4.49 |
+| Volume | — | €2.75 | €10.00 |
+| LLM | ~€1.00 | ~€2.00 | €0 (BYOK) |
+| APIs | ~€0.50 | ~€1.00 | ~€1.00 |
+| LB share | ~€0.50 | ~€0.50 | ~€0.50 |
+| **Cost** | **€6.49** | **€10.74** | **€15.99** |
+| **Margin** | **35%** | **28%** | **47%** |
+
+---
+
+## 15. User Journey
+
+### Onboarding
+1. Sign up at tevy2.ai
+2. Enter website URL + social links
+3. Connect Telegram (provide bot token)
+4. Agent provisions (~60 seconds)
+5. Agent scrapes brand → sends first message: "Hey! Here's what I found about your brand..."
+
+### Day-to-Day
+Chat with your agent via Telegram or webchat. It drafts posts, tracks competitors, does SEO audits, and manages your content calendar — all through conversation.
+
+### Dashboard
+Overview, brand profile, content calendar, connected accounts, skills, analytics, embedded webchat, settings.
+
+---
+
+## 16. Dev Platform Future
+
+The backend is already a generic agent provisioning API. To become a dev platform:
+1. Add API key auth to the existing auth middleware
+2. Add a "Generate API Key" button to the dashboard
+3. Publish API docs
+
+Same routes, same Hetzner calls, same everything. Tevy2 dashboard is just one consumer. External devs use the same API with API keys instead of Stytch sessions.
+
+---
+
+## 17. Tech Stack
+
+| Component | Technology | Cost |
+|-----------|-----------|------|
+| Frontend | Next.js + Tailwind on Netlify | Free |
+| Auth | Stytch (magic link) | Free tier |
+| Backend | Hono on Railway | ~€5/mo |
+| Database | Supabase (2 tables) | Free tier |
+| Agent VPS | Hetzner CX23 per customer | €4.49/customer/mo |
+| Load Balancer | Hetzner LB | €5.49/mo |
+| AI Engine | OpenClaw (native on VPS) | Free (OSS) |
+| LLM | Anthropic Claude | Usage-based |
+| Web Search | Tavily API | Usage-based |
+| Image repo | GitHub (tevy-agent-image) | Free |
+| Domain | tevy2.ai | Registered ✅ |
+
+---
+
+## 18. Decisions Made
+
+| Decision | Choice | Why |
+|----------|--------|-----|
+| Hosting | Hetzner CX23, 1:1 VPS | Simple, secure, no orchestration |
+| Image | Git repo + Hetzner snapshot | Snapshot = just Ubuntu+Node. Git repo = everything else |
+| Updates | git push → SSH update.sh | No rebuild needed for 95% of updates |
+| Skills | Symlinked from /opt/tevy/skills/ | Updated via git pull, no per-customer management |
+| State management | VPS is source of truth | No complex DB. OpenClaw manages its own state |
+| Database | 2 Supabase tables | accounts + agents. That's it. |
+| Backend | Thin Hetzner API proxy | ~50 lines of logic + auth + billing |
+| Portability | tar ~/.openclaw/ → scp → untar | 5 commands to migrate |
+| Containers | None | Not needed. Native install is simpler |
+| Fly.io | Replaced | Cost + control + simplicity |
+| Clawster | Shelved | Focus on Tevy2 |
+
+## 19. Open Questions
+
+1. Hetzner account — Boss needs to create + share API token
+2. LLM model — Sonnet vs Opus for default instances?
+3. Stripe account — needed for billing
+4. Postiz account — needed for social posting
+5. Demo business — which brand to test with?
+6. X.com developer account — apply under Brain&Bot?
+
+---
+
+*Created: 2026-03-04 | Last updated: 2026-03-15 23:30 UTC*
