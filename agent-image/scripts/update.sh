@@ -11,11 +11,17 @@ git pull origin main 2>/dev/null || echo "git pull failed — not a git repo?"
 
 # Check if OpenClaw needs updating
 WANTED=$(cat /opt/tevy/openclaw-version.txt 2>/dev/null || echo "")
-CURRENT=$(openclaw --version 2>/dev/null || echo "none")
+CURRENT=$(openclaw --version 2>/dev/null | head -1 || echo "none")
 
 if [ -n "$WANTED" ] && [ "$CURRENT" != "$WANTED" ]; then
   echo "Updating OpenClaw: $CURRENT → $WANTED"
   npm install -g "openclaw@$WANTED"
+  # Verify binary is not 0 bytes
+  BINARY_SIZE=$(wc -c < /usr/lib/node_modules/openclaw/openclaw.mjs 2>/dev/null || echo 0)
+  if [ "$BINARY_SIZE" -lt 100 ]; then
+    echo "WARNING: Binary is $BINARY_SIZE bytes, reinstalling..."
+    npm install -g "openclaw@$WANTED"
+  fi
 else
   echo "OpenClaw is current: $CURRENT"
 fi

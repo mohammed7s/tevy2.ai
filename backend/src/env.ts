@@ -38,7 +38,7 @@ export const env = {
   // Hetzner Cloud (only needed if INFRA_PROVIDER=hetzner)
   HETZNER_API_TOKEN: optional("HETZNER_API_TOKEN", ""),
   HETZNER_SERVER_TYPE: optional("HETZNER_SERVER_TYPE", "cx23"),  // 2 vCPU, 4GB RAM, 40GB NVMe, €2.99/mo
-  HETZNER_LOCATION: optional("HETZNER_LOCATION", "fsn1"),       // Falkenstein (cheapest EU)
+  HETZNER_LOCATION: optional("HETZNER_LOCATION", "nbg1"),       // Nuremberg (fsn1 disabled)
   HETZNER_SNAPSHOT_ID: optional("HETZNER_SNAPSHOT_ID", ""),      // Base image snapshot
   HETZNER_SSH_KEY_ID: optional("HETZNER_SSH_KEY_ID", ""),        // SSH key ID in Hetzner
   HETZNER_SSH_KEY_PATH: optional("HETZNER_SSH_KEY_PATH", ""),    // Local path to private key

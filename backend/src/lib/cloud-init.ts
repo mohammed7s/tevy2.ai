@@ -5,6 +5,16 @@
  * Two modes:
  *   1. buildBaseImageScript() — for creating the base snapshot (Ubuntu + Node + OpenClaw)
  *   2. buildProvisionScript() — for per-customer provisioning from snapshot
+ *
+ * LESSONS FROM TESTING (2026-03-16):
+ *   - openclaw.json uses: auth, agents, channels, gateway, plugins (NOT system/providers/controlUi)
+ *   - API key goes in ~/.openclaw/settings/.credentials-anthropic-default (NOT in openclaw.json)
+ *   - systemd ExecStart must be: /usr/bin/openclaw gateway run (NOT gateway start --foreground)
+ *   - npm install -g openclaw can produce 0-byte .mjs — run `openclaw --version` to verify
+ *   - systemd service can get masked during snapshot — unmask in provision script
+ *   - gateway.bind must be "lan" for external access (not "loopback")
+ *   - CX22 deprecated → use CX23 (2 vCPU, 4GB, 40GB, €2.99/mo)
+ *   - fsn1 location disabled → use nbg1 (Nuremberg)
  */
 
 export type CustomerConfig = {
@@ -35,8 +45,6 @@ export type CustomerConfig = {
 /**
  * Script to create the base Hetzner snapshot.
  * Run once on a temp server, then snapshot it.
- *
- * Installs: Ubuntu essentials, Node.js 22, OpenClaw, agent user, systemd service.
  */
 export function buildBaseImageScript(): string {
   return `#!/bin/bash
@@ -61,20 +69,30 @@ npm --version
 # Install OpenClaw globally
 npm install -g openclaw
 
-# Verify
+# Verify binary is not 0 bytes (npm install quirk)
+BINARY_SIZE=\$(wc -c < /usr/lib/node_modules/openclaw/openclaw.mjs)
+if [ "\$BINARY_SIZE" -lt 100 ]; then
+  echo "WARNING: openclaw.mjs is \$BINARY_SIZE bytes, reinstalling..."
+  npm install -g openclaw
+fi
 openclaw --version
 
 # Create agent user (non-root, with home dir)
 useradd -m -s /bin/bash agent
-# Allow agent to restart its own service
-echo "agent ALL=(ALL) NOPASSWD: /bin/systemctl restart openclaw-gateway, /bin/systemctl stop openclaw-gateway, /bin/systemctl start openclaw-gateway, /bin/systemctl status openclaw-gateway, /bin/journalctl *" > /etc/sudoers.d/agent-openclaw
+
+# Allow agent to restart its own service + read logs
+cat > /etc/sudoers.d/agent-openclaw << 'SUDOERS'
+agent ALL=(ALL) NOPASSWD: /bin/systemctl restart openclaw-gateway, /bin/systemctl stop openclaw-gateway, /bin/systemctl start openclaw-gateway, /bin/systemctl status openclaw-gateway, /bin/journalctl *
+SUDOERS
 chmod 440 /etc/sudoers.d/agent-openclaw
 
-# Create tevy directory structure
+# Create directories
 mkdir -p /opt/tevy
-chown root:root /opt/tevy
+mkdir -p /etc/tevy
+touch /etc/tevy/shared-keys.env
+chmod 600 /etc/tevy/shared-keys.env
 
-# Systemd service for OpenClaw gateway
+# Systemd service — uses 'gateway run' (foreground mode)
 cat > /etc/systemd/system/openclaw-gateway.service << 'SYSTEMD'
 [Unit]
 Description=OpenClaw Gateway (tevy2 agent)
@@ -86,36 +104,24 @@ Type=simple
 User=agent
 Group=agent
 WorkingDirectory=/home/agent
-ExecStart=/usr/bin/openclaw gateway start --foreground
+ExecStart=/usr/bin/openclaw gateway run
 Restart=on-failure
 RestartSec=10
 Environment=NODE_OPTIONS=--max-old-space-size=1536
 EnvironmentFile=-/etc/tevy/shared-keys.env
-
-# Security hardening
 NoNewPrivileges=yes
-ProtectSystem=strict
-ProtectHome=read-only
-ReadWritePaths=/home/agent/.openclaw /tmp
 PrivateTmp=yes
 
 [Install]
 WantedBy=multi-user.target
 SYSTEMD
 
-# Create env file directory
-mkdir -p /etc/tevy
-touch /etc/tevy/shared-keys.env
-chmod 600 /etc/tevy/shared-keys.env
-
-# Enable (but don't start — will start after cloud-init on real servers)
 systemctl daemon-reload
 systemctl enable openclaw-gateway
 
-# Clean up apt cache to reduce snapshot size
+# Clean up
 apt-get clean
-rm -rf /var/lib/apt/lists/*
-rm -rf /tmp/*
+rm -rf /var/lib/apt/lists/* /tmp/*
 
 echo "=== Base image ready. Snapshot this server. ==="
 `;
@@ -124,7 +130,6 @@ echo "=== Base image ready. Snapshot this server. ==="
 /**
  * Per-customer cloud-init script.
  * Runs on first boot after creating a server from the base snapshot.
- * Clones the tevy agent repo, writes customer config, starts the gateway.
  */
 export function buildProvisionScript(config: CustomerConfig): string {
   const openclawJson = buildOpenClawConfig(config);
@@ -145,6 +150,9 @@ export function buildProvisionScript(config: CustomerConfig): string {
   const competitorsMd = buildCompetitorsMd(config.competitors);
   const competitorsB64 = Buffer.from(competitorsMd).toString("base64");
 
+  // API key goes in credential store, not openclaw.json
+  const apiKeyB64 = Buffer.from(config.anthropicApiKey).toString("base64");
+
   const gitRepo = config.gitRepoUrl || "https://github.com/mcclowin/tevy-agent-image.git";
 
   return `#!/bin/bash
@@ -154,11 +162,49 @@ exec > /var/log/tevy-provision.log 2>&1
 echo "=== tevy2 provisioning for ${config.slug} ==="
 echo "Started: $(date -u)"
 
-# Clone the tevy agent image repo
+# Unmask service if needed (snapshot quirk)
+systemctl unmask openclaw-gateway 2>/dev/null || true
+
+# Verify openclaw binary is intact
+BINARY_SIZE=$(wc -c < /usr/lib/node_modules/openclaw/openclaw.mjs 2>/dev/null || echo 0)
+if [ "$BINARY_SIZE" -lt 100 ]; then
+  echo "Reinstalling openclaw (binary was $BINARY_SIZE bytes)..."
+  npm install -g openclaw
+fi
+
+# Re-create systemd service (in case unmask removed it)
+if [ ! -f /etc/systemd/system/openclaw-gateway.service ]; then
+  cat > /etc/systemd/system/openclaw-gateway.service << 'SYSTEMD'
+[Unit]
+Description=OpenClaw Gateway (tevy2 agent)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=agent
+Group=agent
+WorkingDirectory=/home/agent
+ExecStart=/usr/bin/openclaw gateway run
+Restart=on-failure
+RestartSec=10
+Environment=NODE_OPTIONS=--max-old-space-size=1536
+EnvironmentFile=-/etc/tevy/shared-keys.env
+NoNewPrivileges=yes
+PrivateTmp=yes
+
+[Install]
+WantedBy=multi-user.target
+SYSTEMD
+  systemctl daemon-reload
+  systemctl enable openclaw-gateway
+fi
+
+# Clone the tevy agent image repo (skills, shared keys, update script)
 if [ ! -d /opt/tevy/.git ]; then
-  git clone ${gitRepo} /opt/tevy
+  git clone ${gitRepo} /opt/tevy 2>/dev/null || echo "Git clone failed — continuing without repo"
 else
-  cd /opt/tevy && git pull origin main
+  cd /opt/tevy && git pull origin main 2>/dev/null || true
 fi
 
 # Create workspace directories
@@ -166,10 +212,13 @@ su - agent -c "mkdir -p /home/agent/.openclaw/workspace/memory"
 su - agent -c "mkdir -p /home/agent/.openclaw/workspace/skills"
 su - agent -c "mkdir -p /home/agent/.openclaw/settings"
 
-# Write openclaw.json
+# Write openclaw.json (config — NO API keys here)
 echo '${openclawJsonB64}' | base64 -d > /home/agent/.openclaw/openclaw.json
-chown agent:agent /home/agent/.openclaw/openclaw.json
 chmod 600 /home/agent/.openclaw/openclaw.json
+
+# Write API key to credential store
+echo '${apiKeyB64}' | base64 -d > /home/agent/.openclaw/settings/.credentials-anthropic-default
+chmod 600 /home/agent/.openclaw/settings/.credentials-anthropic-default
 
 # Write workspace files (customer's copies — independent after first boot)
 echo '${soulMdB64}' | base64 -d > /home/agent/.openclaw/workspace/SOUL.md
@@ -178,7 +227,7 @@ echo '${userMdB64}' | base64 -d > /home/agent/.openclaw/workspace/USER.md
 echo '${brandProfileB64}' | base64 -d > /home/agent/.openclaw/workspace/memory/brand-profile.md
 echo '${competitorsB64}' | base64 -d > /home/agent/.openclaw/workspace/memory/competitors.md
 
-# Copy shared keys
+# Copy shared keys from repo
 if [ -f /opt/tevy/shared-keys.env ]; then
   cp /opt/tevy/shared-keys.env /etc/tevy/shared-keys.env
   chmod 600 /etc/tevy/shared-keys.env
@@ -207,8 +256,8 @@ fi
 systemctl daemon-reload
 systemctl restart openclaw-gateway
 
-# Wait for gateway to be ready (max 60s)
-for i in $(seq 1 12); do
+# Wait for gateway to be ready (max 90s — OpenClaw takes ~60s to init)
+for i in $(seq 1 18); do
   if systemctl is-active openclaw-gateway >/dev/null 2>&1; then
     echo "Gateway is active after ~$((i * 5))s"
     break
@@ -222,30 +271,58 @@ echo "=== Provisioning complete: $(date -u) ==="
 
 // ── Config builders ────────────────────────────────────────────────────
 
+/**
+ * Build openclaw.json with correct schema.
+ * API key is NOT stored here — it goes in the credential store.
+ */
 function buildOpenClawConfig(config: CustomerConfig): Record<string, unknown> {
   const cfg: Record<string, unknown> = {
-    system: {
-      model: config.defaultModel || "anthropic/claude-sonnet-4-20250514",
-      gatewayToken: config.gatewayToken,
-    },
-    providers: {
-      anthropic: {
-        apiKey: config.anthropicApiKey,
+    auth: {
+      profiles: {
+        "anthropic:default": {
+          provider: "anthropic",
+          mode: "token",
+        },
       },
     },
-    controlUi: {
-      enabled: true,
-      allowedOrigins: [config.tevy2DashboardUrl],
+    agents: {
+      defaults: {
+        workspace: "/home/agent/.openclaw/workspace",
+        maxConcurrent: 4,
+      },
+    },
+    gateway: {
+      port: 18789,
+      mode: "local",
+      bind: "lan",  // Must be "lan" for external access through LB
+      auth: {
+        mode: "token",
+        token: config.gatewayToken,
+      },
+    },
+    plugins: {
+      entries: {} as Record<string, { enabled: boolean }>,
     },
   };
 
-  // Add Telegram if provided
+  // Add Telegram channel if provided
   if (config.telegramBotToken) {
     (cfg as any).channels = {
       telegram: {
         enabled: true,
         botToken: config.telegramBotToken,
+        streaming: true,
+        dmPolicy: "open",  // Allow any DM (customer's bot, they decide who talks to it)
       },
+    };
+    ((cfg as any).plugins.entries as Record<string, { enabled: boolean }>).telegram = { enabled: true };
+  }
+
+  // Add control UI config
+  if (config.tevy2DashboardUrl) {
+    (cfg as any).gateway.controlUi = {
+      enabled: true,
+      allowedOrigins: [config.tevy2DashboardUrl],
     };
   }
 

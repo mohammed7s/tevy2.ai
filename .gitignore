@@ -16,3 +16,7 @@ USER.md
 
 # Local Netlify folder
 .netlify
+
+# Test secrets
+test/.env.test
+test/.last-test-server
