@@ -150,8 +150,19 @@ export function buildProvisionScript(config: CustomerConfig): string {
   const competitorsMd = buildCompetitorsMd(config.competitors);
   const competitorsB64 = Buffer.from(competitorsMd).toString("base64");
 
-  // API key goes in credential store, not openclaw.json
-  const apiKeyB64 = Buffer.from(config.anthropicApiKey).toString("base64");
+  // API key goes in auth-profiles.json (agents/main/agent/), not openclaw.json
+  const authProfiles = JSON.stringify({
+    version: 1,
+    profiles: {
+      "anthropic:default": {
+        type: "token",
+        provider: "anthropic",
+        token: config.anthropicApiKey,
+      },
+    },
+    lastGood: { anthropic: "anthropic:default" },
+  });
+  const authProfilesB64 = Buffer.from(authProfiles).toString("base64");
 
   const gitRepo = config.gitRepoUrl || "https://github.com/mcclowin/tevy-agent-image.git";
 
@@ -216,9 +227,10 @@ su - agent -c "mkdir -p /home/agent/.openclaw/settings"
 echo '${openclawJsonB64}' | base64 -d > /home/agent/.openclaw/openclaw.json
 chmod 600 /home/agent/.openclaw/openclaw.json
 
-# Write API key to credential store
-echo '${apiKeyB64}' | base64 -d > /home/agent/.openclaw/settings/.credentials-anthropic-default
-chmod 600 /home/agent/.openclaw/settings/.credentials-anthropic-default
+# Write API key to auth-profiles.json (correct OpenClaw credential store path)
+mkdir -p /home/agent/.openclaw/agents/main/agent
+echo '${authProfilesB64}' | base64 -d > /home/agent/.openclaw/agents/main/agent/auth-profiles.json
+chmod 600 /home/agent/.openclaw/agents/main/agent/auth-profiles.json
 
 # Write workspace files (customer's copies — independent after first boot)
 echo '${soulMdB64}' | base64 -d > /home/agent/.openclaw/workspace/SOUL.md
@@ -312,7 +324,8 @@ function buildOpenClawConfig(config: CustomerConfig): Record<string, unknown> {
         enabled: true,
         botToken: config.telegramBotToken,
         streaming: true,
-        dmPolicy: "open",  // Allow any DM (customer's bot, they decide who talks to it)
+        dmPolicy: "open",
+        allowFrom: ["*"],  // Required when dmPolicy is "open"
       },
     };
     ((cfg as any).plugins.entries as Record<string, { enabled: boolean }>).telegram = { enabled: true };
