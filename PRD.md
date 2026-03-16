@@ -2,7 +2,7 @@
 
 > AI Marketing Concierge for SMEs
 > Status: In Development
-> Last updated: 2026-03-15 23:30 UTC
+> Last updated: 2026-03-16 00:06 UTC
 
 ---
 
@@ -367,8 +367,7 @@ Can gate skills by checking plan tier in AGENTS.md or via a simple check script.
 ### Day-to-Day
 Chat with your agent via Telegram or webchat. It drafts posts, tracks competitors, does SEO audits, and manages your content calendar — all through conversation.
 
-### Dashboard
-Overview, brand profile, content calendar, connected accounts, skills, analytics, embedded webchat, settings.
+### Dashboard (see Section 20 for full breakdown)
 
 ---
 
@@ -428,4 +427,137 @@ Same routes, same Hetzner calls, same everything. Tevy2 dashboard is just one co
 
 ---
 
-*Created: 2026-03-04 | Last updated: 2026-03-15 23:30 UTC*
+---
+
+## 20. Dashboard Architecture
+
+### What Already Exists (don't rebuild)
+
+**OpenClaw Built-in Control UI** (port 18789, on every VPS):
+- Chat with agent (streaming, tool calls, file attachments)
+- Channel management (Telegram/WhatsApp/Discord/Slack status, QR login, per-channel config)
+- Sessions list with per-session model/thinking overrides
+- Cron jobs (create/edit/run/enable/disable + run history)
+- Skills (status, enable/disable, install, API key updates)
+- Config editor (view/edit openclaw.json with schema validation + form rendering)
+- Config apply + restart with validation
+- Live log tail with filter/export
+- Update (package/git update + restart)
+- Device pairing security for remote access
+- i18n (en, zh-CN, zh-TW, pt-BR, de, es)
+
+**Mission Control** (community, robsannaa/openclaw-mission-control):
+- All of the above PLUS:
+- Dashboard overview (live agent status, gateway health, system resources)
+- Tasks Kanban board (Backlog/In Progress/Review/Done)
+- Usage/cost tracking with charts (tokens per model per agent)
+- Agent org chart with subagent management
+- Memory editor (view/edit long-term memory + daily journals + vector search)
+- Models manager (credentials, fallback chains, switch per agent)
+- Doctor (diagnostics + one-click fixes)
+- Terminal (full CLI in browser, multiple tabs)
+- Document explorer with Cmd+K semantic search
+- Security audits + permissions + credentials management
+- Tailscale integration
+- Key philosophy: "NOT a separate platform. A transparent window into OpenClaw."
+
+### What We Build (Tevy2-specific, our value-add)
+
+Our existing dashboard has these tabs, which we KEEP and OWN:
+
+| Tab | What it does | Data source |
+|-----|-------------|-------------|
+| 🏠 **Home** | Overview: agent status, quick stats, recent activity, webchat embed | Hetzner API (status) + SSH (read memory files) |
+| 🎯 **Brand** | Brand profile editor: business name, website, socials, brand voice, audience persona, value prop. Editable rich form. | SSH: read/write `memory/brand-profile.md` |
+| 📅 **Calendar** | Content calendar: view scheduled/published posts, drag to reschedule, create new | SSH: read/write `memory/content-calendar.md` |
+| 📊 **Analytics** | Post performance across platforms, engagement trends, best times | SSH: read `memory/analytics/` or API to social platforms |
+| 🔍 **Research** | Market research reports, competitor tracking, trend alerts | SSH: read `memory/research/*.md` + `memory/competitors.md` |
+| 🔎 **SEO** | SEO audit results, keyword opportunities, content optimization recs | SSH: read `memory/seo/audit.md` + `memory/seo/keywords.md` |
+| ⚙️ **Settings** | Start/stop agent, delete instance, connection status, Telegram config, billing | Hetzner API + SSH + Stripe |
+
+### What We Take from OpenClaw UI (embed, don't rebuild)
+
+For "advanced" agent management, we embed the OpenClaw Control UI directly:
+
+| Feature | Source | How we integrate |
+|---------|--------|-----------------|
+| Chat with agent | OpenClaw Control UI | Embed webchat widget in Home tab + dedicated /chat page |
+| Skills management | OpenClaw Control UI | Link to Control UI skills page from Settings |
+| Channel config | OpenClaw Control UI | Link to Control UI channels page from Settings |
+| Config editor | OpenClaw Control UI | Link to Control UI config page (advanced users only) |
+| Cron jobs | OpenClaw Control UI | Link to Control UI cron page from Settings |
+| Logs | OpenClaw Control UI | Link to Control UI logs page from Settings |
+
+### How embedding works
+
+Each customer's VPS runs the OpenClaw Control UI at port 18789. We expose it through the load balancer:
+
+```
+customer-slug.agents.tevy2.ai        → VPS port 18789 (Control UI + WebSocket)
+tevy2.ai/dashboard                   → Our Next.js app (Netlify)
+```
+
+The dashboard embeds the Control UI webchat via iframe or proxied WebSocket:
+
+```tsx
+// Home tab — embedded webchat
+<iframe 
+  src={`https://${instanceData.slug}.agents.tevy2.ai/chat`}
+  className="w-full h-96 rounded-lg border"
+/>
+```
+
+For advanced settings, we link out:
+```tsx
+// Settings tab — advanced section
+<a href={`https://${instanceData.slug}.agents.tevy2.ai`} target="_blank">
+  Open Agent Control Panel →
+</a>
+```
+
+### Dashboard data flow
+
+```
+Dashboard reads/writes agent data via SSH (through backend):
+
+GET  /v1/agents/:id/files/workspace/memory/brand-profile.md     → Brand tab
+PUT  /v1/agents/:id/files/workspace/memory/brand-profile.md     → Brand tab save
+GET  /v1/agents/:id/files/workspace/memory/content-calendar.md  → Calendar tab
+GET  /v1/agents/:id/files/workspace/memory/competitors.md       → Research tab
+GET  /v1/agents/:id/files/workspace/memory/seo/audit.md         → SEO tab
+GET  /v1/agents/:id/files/workspace/memory/research/             → Research tab (list)
+
+All reads: Backend SSHs into VPS, reads file, returns content
+All writes: Backend SSHs into VPS, writes file, optionally restarts gateway
+```
+
+### What we DON'T build
+
+- ❌ Our own chat implementation (use OpenClaw's)
+- ❌ Our own skills manager (use OpenClaw's)
+- ❌ Our own config editor (use OpenClaw's)
+- ❌ Our own cron scheduler (use OpenClaw's)
+- ❌ Our own log viewer (use OpenClaw's)
+- ❌ Our own channel manager (use OpenClaw's)
+- ❌ Our own auth for the agent itself (use OpenClaw's gateway token)
+
+### MVP dashboard scope
+
+**Week 1 (ship immediately):**
+- Home tab: agent status + embedded webchat
+- Settings tab: start/stop/delete + Telegram connection status
+- Link to full Control UI for everything else
+
+**Week 2-3:**
+- Brand tab: read/write brand-profile.md via rich form
+- Calendar tab: read/write content-calendar.md
+- Research tab: display research/*.md files
+
+**Month 2+:**
+- Analytics tab: social platform API integration
+- SEO tab: display audit results
+- Skills marketplace in dashboard
+
+---
+
+*Created: 2026-03-04 | Last updated: 2026-03-16 00:06 UTC*
